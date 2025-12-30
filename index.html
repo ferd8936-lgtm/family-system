@@ -15,13 +15,11 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-s
 header{padding:16px;text-align:center;font-size:20px;font-weight:700;background:#fff;border-bottom:1px solid var(--line);}
 main{max-width:1100px;margin:auto;padding:16px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
-button{padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0;}
-button.gray{background:#e5e7eb;color:#111}
+button, .sms-btn{display:block; width:100%; padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; text-align:center; text-decoration:none; font-size:16px;}
+button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
-button.small{padding: 4px 10px; font-size: 13px; margin: 0; margin-left: 8px;}
-input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
-input::placeholder, textarea::placeholder {color: #aaa;}
+input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;font-size: 16px; color: #666;font-family: inherit;}
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 .top-search {display: flex;gap: 8px;align-items: center;margin-bottom: 12px;}
 .top-search input {margin-top: 0;height: 48px;}
@@ -39,8 +37,7 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
-.btn-row button {flex: 1; margin: 0;}
-.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
+.btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
@@ -77,29 +74,17 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 문자 발송 로직 최종 강화 (새창 열기 방식 추가) */
-function sendGroupSMS(text) {
+/* ✅ 문자 URL 생성 함수 (보안 차단 해결을 위해 링크를 직접 반환) */
+function getSmsUrl(text) {
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const link = window.location.href;
     const fullText = `${text}\n확인하기: ${link}`;
-    
-    // 안드로이드는 콤마(,)보다 세미콜론(;)을 구분자로 쓸 때 더 정확히 인식하는 기종이 많습니다.
     const phoneString = isIOS ? FAMILY_PHONES.join(",") : FAMILY_PHONES.join(";");
     
-    let smsUrl = "";
-    if (isIOS) {
-        smsUrl = `sms:${phoneString}&body=${encodeURIComponent(fullText)}`;
-    } else {
-        smsUrl = `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
-    }
-
-    // 팝업 차단 우회 및 강제 실행을 위해 <a> 태그를 생성해 클릭하는 방식 사용
-    const a = document.createElement("a");
-    a.href = smsUrl;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    return isIOS 
+        ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
+        : `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
 }
 
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
@@ -124,35 +109,20 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[결재요청] ${t}\n엄마, 아빠 결재 부탁드려요!`;
+    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 부탁드려요!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
+    // ✅ 버튼 대신 실제 <a> 태그(링크)를 사용하여 브라우저 차단 회피
     m.innerHTML = `
       <div class="card" style="text-align:center;">
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
         <p style="color:#666; margin-bottom:20px;">가족들에게 단체 문자를 보낼까요?</p>
-        <div style="display:flex; gap:10px;">
-          <button style="flex:1; margin:0;" onclick="sendGroupSMS('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</button>
-          <button class="gray" style="flex:1; margin:0;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
+        <div class="btn-row">
+          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</a>
+          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
         </div>
       </div>`;
   });
-}
-
-function askDelete(dbId){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
-  setTimeout(()=>document.getElementById("delPw").focus(), 100);
-}
-function authDelete(dbId){
-  if(document.getElementById("delPw").value === PASSWORD){
-    db.ref("approvals/"+dbId).remove().then(() => {
-      alert("삭제되었습니다.");
-      document.getElementById("pwModal").style.display="none";
-      navigate({page:'list'});
-    });
-  } else { alert("비밀번호가 틀렸습니다."); }
 }
 
 function openParent(id){
@@ -172,22 +142,19 @@ function authParent(id){
 }
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
-  const updates = {};
-  updates[who] = val;
-  updates[who+"C"] = comment;
-  updates[who+"Time"] = now();
-  db.ref("approvals/"+dbId).update(updates).then(() => {
+  db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
+    // ✅ 부모님 결재 완료 팝업에서도 링크 방식 적용
     m.innerHTML = `
       <div class="card" style="text-align:center;">
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 결재 완료</b>
         <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
-        <div style="display:flex; gap:10px;">
-          <button style="flex:1; margin:0;" onclick="sendGroupSMS('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</button>
-          <button class="gray" style="flex:1; margin:0;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
+        <div class="btn-row">
+          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</a>
+          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
         </div>
       </div>`;
   });
@@ -221,10 +188,10 @@ function render(){
   } 
   else if(route.page === "new"){
     app.innerHTML = `<div class="card">
-      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요? 또는 하고 싶나요?">
-      <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한지(목표/이유)를 써보세요"></textarea>
-      <label>계획</label><textarea id="pl" rows="5" placeholder="앞으로 무엇을 어떻게 할 건지 자세하게 써보세요"></textarea>
-      <label>비용(원)</label><input id="c" type="text" placeholder="얼마인지 자유롭게 생각하고 써보세요" oninput="this.value=formatComma(this.value)">
+      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요?">
+      <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한가요?"></textarea>
+      <label>계획</label><textarea id="pl" rows="5" placeholder="어떻게 사용할 건가요?"></textarea>
+      <label>비용(원)</label><input id="c" type="text" placeholder="금액 입력" oninput="this.value=formatComma(this.value)">
       <div class="btn-row">
         <button onclick="submit()">결재올리기</button>
         <button class="gray" onclick="navigate({page:'list'})">취소</button>
@@ -256,6 +223,11 @@ function render(){
   }
 }
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
+function askDelete(dbId){
+  if(prompt("삭제하시려면 비밀번호를 입력하세요.") === PASSWORD){
+    db.ref("approvals/"+dbId).remove().then(() => { alert("삭제되었습니다."); navigate({page:'list'}); });
+  }
+}
 function openStats(){
   const stats = {};
   allData.filter(x => getStatus(x) !== "대기").forEach(item => {
