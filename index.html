@@ -7,7 +7,6 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-messaging-compat.js"></script>
 
 <style>
 :root{--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--brand:#6366f1;--ok:#16a34a;--bad:#dc2626;--wait:#d97706;}
@@ -16,39 +15,27 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-s
 header{padding:16px;text-align:center;font-size:20px;font-weight:700;background:#fff;border-bottom:1px solid var(--line);}
 main{max-width:1100px;margin:auto;padding:16px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
-button{padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0;}
+button{padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; width: 100%;}
 button.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
-button.small{padding: 4px 10px; font-size: 13px; margin: 0; margin-left: 8px;}
 input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
-input::placeholder, textarea::placeholder {color: #aaa;}
-label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
-.top-search {display: flex;gap: 8px;align-items: center;margin-bottom: 12px;}
-.top-search input {margin-top: 0;height: 48px;}
-.top-search button {height: 48px;margin: 0;min-width: 72px;white-space: nowrap;}
+label{font-weight:600;margin-top:14px;display:block;}
 .table-wrapper {max-height: 540px;overflow-y: auto;border: 1px solid var(--line);border-radius: 8px;}
-table{width:100%; border-collapse:collapse; position: relative;}
-thead th {position: sticky;top: 0;background: #fdfdfd;z-index: 10;border-bottom: 2px solid var(--line);}
+table{width:100%; border-collapse:collapse;}
 th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
-tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
-td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:1.35;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
-.top-actions{display:flex;gap:10px;margin-bottom:16px;}
-.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
-.modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
+.modal .card{width:min(480px,100%);}
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
 .btn-row button {flex: 1; margin: 0;}
-.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 </style>
 </head>
 <body>
 <header>가족 결재시스템</header>
 <main id="app">데이터 로딩 중...</main>
 <div id="pwModal" class="modal"></div>
-<div id="statModal" class="modal"></div>
 
 <script>
 const firebaseConfig = {
@@ -62,24 +49,12 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const messaging = firebase.messaging();
 const PASSWORD = "7102";
 
-/* ✅ 웹 푸시 알림 권한 요청 및 토큰 저장 */
-Notification.requestPermission().then((permission) => {
-  if (permission === 'granted') {
-    messaging.getToken({ 
-      vapidKey: 'BAm97KNE7D-Y068Qhga4yJNaPHn2GrGkECr9k1PcENI6Y2EFP2AIo87OK32gyC3rQcGLMtdtpwhL-syNdPmpxhM' 
-    }).then((currentToken) => {
-      if (currentToken) {
-        db.ref("push_tokens").child(currentToken).set(true);
-      }
-    });
-  }
-});
+// ✅ 등록하신 3개의 전화번호
+const FAMILY_PHONES = ["01021165677", "01093778936", "01035005677"];
 
 let route = { page: "list", id: null };
-let keyword = "";
 let allData = [];
 
 db.ref("approvals").on("value", (snapshot) => {
@@ -88,16 +63,21 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 푸시 알림 발송 데이터 기록 함수 */
-function sendPushNotification(title, message) {
-  // 클라우드 함수(유료) 없이 클라이언트끼리 통신하기 위해 DB에 알림 요청을 기록합니다.
-  const notificationData = {
-    title: title,
-    body: message,
-    time: Date.now()
-  };
-  db.ref("notifications_log").push(notificationData);
-  console.log("푸시 알림 기록 완료:", title);
+/* ✅ 단체 문자 전송 함수 */
+function sendGroupSMS(text) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const link = window.location.href;
+    const fullText = `${text}\n확인: ${link}`;
+    
+    // 전화번호들을 구분자로 합칩니다 (iOS는 콤마, 안드로이드는 세미콜론을 주로 사용하나 콤마가 범용적입니다)
+    const phoneString = FAMILY_PHONES.join(",");
+    
+    // iOS와 안드로이드의 문자 전송 규격에 맞춤
+    const smsUrl = isIOS 
+        ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
+        : `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
+    
+    window.location.href = smsUrl;
 }
 
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
@@ -109,165 +89,100 @@ function getStatus(r){
   return (mom === "approve" && dad === "approve") ? "승인" : "반려";
 }
 function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?'no':'wait')}">${s}</span>`; }
-function transKo(v){ return v === "approve" ? "승인" : (v === "reject" ? "반려" : "대기"); }
-function navigate(p, push=true){ route = p; if(push) history.pushState(route,""); render(); }
+function navigate(p){ route = p; render(); }
 
 function submit(){
   const t = document.getElementById("t").value.trim();
+  const c = document.getElementById("c").value.replace(/,/g, '').trim();
   const p = document.getElementById("p").value.trim();
-  const pl = document.getElementById("pl").value.trim();
-  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
-  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
+  if(!t || !c || !p) return alert("빈칸을 채워주세요.");
 
-  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
+  const newPost = { id: Date.now().toString(), title:t, cost:c, purpose:p, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    // 푸시 알림 기록
-    sendPushNotification("가족 결재 요청", `[${t}] 결재가 올라왔습니다. 확인해주세요!`);
-    
+    const msg = `[결재요청] ${t}\n금액: ${Number(c).toLocaleString()}원\n결재 부탁드립니다!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
       <div class="card" style="text-align:center;">
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
-        <p style="color:#666; margin-bottom:20px;">결재가 정상적으로 올라갔습니다.<br>가족들에게 푸시 알림이 전송됩니다.</p>
-        <button onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">확인</button>
+        <p style="color:#666; margin-bottom:20px;">가족들에게 단체 문자를 보낼까요?</p>
+        <button onclick="sendGroupSMS('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</button>
+        <button class="gray" style="margin-top:10px;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
       </div>`;
   });
 }
 
-function askDelete(dbId){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
-  setTimeout(()=>document.getElementById("delPw").focus(), 100);
-}
-function authDelete(dbId){
-  if(document.getElementById("delPw").value === PASSWORD){
-    db.ref("approvals/"+dbId).remove().then(() => {
-      alert("삭제되었습니다.");
-      document.getElementById("pwModal").style.display="none";
-      navigate({page:'list'});
-    });
-  } else { alert("비밀번호가 틀렸습니다."); }
+function openParent(id){
+  const pw = prompt("비밀번호를 입력하세요.");
+  if(pw !== PASSWORD) return alert("틀렸습니다.");
+  const r = allData.find(x=>x.id===id);
+  navigate({page:'view', id: id, auth: true});
 }
 
-function openParent(id){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`<div class="card"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
-  setTimeout(()=>document.getElementById("pw").focus(), 100);
-}
-function authParent(id){
-  if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
-  document.getElementById("pwModal").style.display="none";
-  const r = allData.find(x=>x.id===id);
-  let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>`;
-  document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
-}
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
   const updates = {};
   updates[who] = val;
   updates[who+"C"] = comment;
-  updates[who+"Time"] = now();
   db.ref("approvals/"+dbId).update(updates).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
+    const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.`;
     
-    // 푸시 알림 기록
-    sendPushNotification("가족 결재 결과", `${who === 'mom' ? '엄마' : '아빠'}님이 [${title}]을 ${resultStr} 하셨습니다.`);
-
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
       <div class="card" style="text-align:center;">
-        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 결재 완료</b>
-        <p style="color:#666; margin-bottom:20px;">결재 처리가 완료되었습니다.<br>가족들에게 푸시 알림이 전송됩니다.</p>
-        <button onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">확인</button>
+        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 처리 완료</b>
+        <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
+        <button onclick="sendGroupSMS('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</button>
+        <button class="gray" style="margin-top:10px;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
       </div>`;
   });
 }
 
 function render(){
   const app = document.getElementById("app");
-  let displayData = [...allData];
-  if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
-  displayData.sort((a,b) => b.time.localeCompare(a.time));
-
   if(route.page === "list"){
     app.innerHTML = `
-      <div class="top-search"><button class="gray" onclick="doSearch()">검색</button><input id="q" placeholder="검색어 입력" value="${esc(keyword)}"></div>
-      <div class="top-actions"><button onclick="navigate({page:'new'})">결재올리기</button><button onclick="openStats()">통계</button></div>
+      <button onclick="navigate({page:'new'})" style="margin-bottom:16px;">+ 새 결재 요청</button>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>No</th><th>제목 / 상신시간</th><th>상태</th></tr></thead>
+          <thead><tr><th>제목 / 시간</th><th>상태</th></tr></thead>
           <tbody>
-            ${displayData.map((r,i)=>`
-              <tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
-                <td>${displayData.length - i}</td>
-                <td class="title"><div>${esc(r.title)}</div><small>${r.time}</small></td>
+            ${allData.sort((a,b)=>b.time.localeCompare(a.time)).map(r=>`
+              <tr onclick="navigate({page:'view', id:'${r.id}'})">
+                <td style="text-align:left;"><b>${esc(r.title)}</b><br><small>${r.time}</small></td>
                 <td>${badge(getStatus(r))}</td>
               </tr>
             `).join("")}
           </tbody>
         </table>
       </div>`;
-    const q=document.getElementById("q"); if(q) q.addEventListener("keydown", e => e.key === "Enter" && doSearch());
-  } 
-  else if(route.page === "new"){
+  } else if(route.page === "new"){
     app.innerHTML = `<div class="card">
-      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요? 또는 하고 싶나요?">
-      <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한지(목표/이유)를 써보세요"></textarea>
-      <label>계획</label><textarea id="pl" rows="5" placeholder="앞으로 무엇을 어떻게 할 건지 자세하게 써보세요"></textarea>
-      <label>비용(원)</label><input id="c" type="text" placeholder="얼마인지 자유롭게 생각하고 써보세요" oninput="this.value=formatComma(this.value)">
-      <div class="btn-row">
-        <button onclick="submit()">결재올리기</button>
-        <button class="gray" onclick="navigate({page:'list'})">취소</button>
-      </div>
+      <label>제목</label><input id="t" placeholder="예: 문제집 구매">
+      <label>금액(원)</label><input id="c" type="text" oninput="this.value=formatComma(this.value)">
+      <label>이유</label><textarea id="p" rows="4"></textarea>
+      <button onclick="submit()">결재 상신</button>
+      <button class="gray" onclick="navigate({page:'list'})">취소</button>
+    </div>`;
+  } else if(route.page === "view"){
+    const r = allData.find(x => x.id === route.id);
+    app.innerHTML = `<div class="card">
+      <h3>${esc(r.title)}</h3>
+      <p><b>금액:</b> ${Number(r.cost).toLocaleString()}원</p>
+      <p><b>이유:</b> ${esc(r.purpose)}</p>
+      <hr>
+      <label>엄마 결재</label><textarea id="momC" rows="2" placeholder="의견">${esc(r.momC)}</textarea>
+      <div class="btn-row"><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div>
+      <label style="margin-top:15px;">아빠 결재</label><textarea id="dadC" rows="2" placeholder="의견">${esc(r.dadC)}</textarea>
+      <div class="btn-row"><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>
+      <button class="gray" style="margin-top:20px;" onclick="navigate({page:'list'})">목록으로</button>
     </div>`;
   }
-  else if(route.page === "view"){
-    const r = allData.find(x => x.id === route.id);
-    if(!r) return navigate({page:'list'});
-    app.innerHTML = `
-      <div class="view-time-header">상신: ${r.time}</div>
-      <div class="card">
-        <label>제목</label><input readonly value="${esc(r.title)}">
-        <label>목적</label><textarea rows="3" readonly>${esc(r.purpose)}</textarea>
-        <label>계획</label><textarea rows="5" readonly>${esc(r.plan)}</textarea>
-        <label>비용(원)</label><input readonly value="${Number(r.cost).toLocaleString()}">
-      </div>
-      <div class="parent-result">
-        <b>부모 결재 기록</b><br>
-        엄마: ${transKo(r.mom)} / ${esc(r.momC||"-")}<br>
-        아빠: ${transKo(r.dad)} / ${esc(r.dadC||"-")}
-      </div>
-      <div id="parentArea"></div>
-      <button style="width:100%;" onclick="openParent('${r.id}')">부모 결재</button>
-      <div class="btn-row">
-        <button class="gray" onclick="navigate({page:'list'})">목록</button>
-        <button class="red" onclick="askDelete('${r.dbId}')">삭제</button>
-      </div>`;
-  }
 }
-function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
-function openStats(){
-  const stats = {};
-  allData.filter(x => getStatus(x) !== "대기").forEach(item => {
-    const key = item.time.substring(0,7).replace("-","년 ") + "월";
-    if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0};
-    const s = getStatus(item); const c = Number(item.cost);
-    if(s==="승인"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; }
-  });
-  const sorted = Object.keys(stats).sort().reverse();
-  const m = document.getElementById("statModal");
-  m.style.display="flex";
-  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
-}
-window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } };
-history.replaceState({page:'list'}, "");
+render();
 </script>
 </body>
 </html>
