@@ -16,13 +16,11 @@ header{padding:16px;text-align:center;font-size:20px;font-weight:700;background:
 main{max-width:1100px;margin:auto;padding:16px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
 
-/* 기본 버튼 스타일 */
 button, .sms-btn{display:block; width:100%; padding:9px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; text-align:center; text-decoration:none; font-size:16px;}
 button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
 
-/* 왼쪽 정렬 및 글자 맞춤 버튼 스타일 */
 button.fit {width: auto; min-width: 80px; display: inline-block; margin: 0 8px 0 0; padding: 9px 20px;}
 
 button.small{padding: 4px 10px; font-size: 13px; margin: 0; margin-left: 8px;}
@@ -30,22 +28,20 @@ input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(
 input::placeholder, textarea::placeholder {color: #aaa;}
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 
-/* 상단 액션 영역 */
 .top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start;}
 .btn-submit, .btn-stats {width: auto !important; margin: 0 !important; padding: 9px 20px !important;}
 
-/* 검색바 영역 */
 .top-search {display: flex; gap: 8px; align-items: center; margin-bottom: 16px;}
 .top-search input {margin-top: 0; height: 38px; flex: 1;}
 .top-search button {height: 38px; margin: 0; min-width: 60px; width: 60px; padding: 0; white-space: nowrap;}
 
 .table-wrapper {max-height: 540px;overflow-y: auto;border: 1px solid var(--line);border-radius: 8px;}
-table{width:100%; border-collapse:collapse; position: relative;}
+table{width:100%; border-collapse:collapse; position: relative; table-layout: fixed;}
 thead th {position: sticky;top: 0;background: #fdfdfd;z-index: 10;border-bottom: 2px solid var(--line);}
 th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
 tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
-td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:1.35;}
-.badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
+td.title{text-align:left; line-height:1.35; word-break: break-all;}
+.badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700; white-space: nowrap;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 
 .parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
@@ -120,7 +116,7 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 해주세요!`;
+    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 부탁드려요!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -138,7 +134,6 @@ function submit(){
 function askDelete(dbId){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
-  /* ✅ 삭제 팝업 UI를 부모 결재 팝업과 동일하게 수정 */
   m.innerHTML=`
     <div class="card" style="text-align:center;">
       <b>결재 삭제</b>
@@ -159,6 +154,15 @@ function authDelete(dbId){
       navigate({page:'list'});
     });
   } else { alert("비밀번호가 틀렸습니다."); }
+}
+
+function updateCost(dbId){
+  const newCostRaw = document.getElementById("editCost").value.replace(/,/g, '').trim();
+  if(!newCostRaw) return alert("수정할 금액을 입력하세요.");
+  db.ref("approvals/"+dbId).update({ cost: newCostRaw }).then(() => {
+    alert("비용이 수정되었습니다.");
+    render();
+  });
 }
 
 function openParent(id){
@@ -184,6 +188,9 @@ function authParent(id){
   if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="fit red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div></div>`;
   if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="fit red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div></div>`;
   document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
+  
+  const btnParent = document.getElementById("btnParentAuth");
+  if(btnParent) btnParent.style.display = "none";
 }
 
 function decide(dbId, who, val, title){
@@ -224,12 +231,17 @@ function render(){
       
       <div class="table-wrapper">
         <table>
+          <colgroup>
+            <col style="width: 45px;">
+            <col>
+            <col style="width: 75px;">
+          </colgroup>
           <thead><tr><th>No</th><th>제목 / 상신시간</th><th>상태</th></tr></thead>
           <tbody>
             ${displayData.map((r,i)=>`
               <tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
                 <td>${displayData.length - i}</td>
-                <td class="title"><div>${esc(r.title)}</div><small>${r.time}</small></td>
+                <td class="title"><div>${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
                 <td>${badge(getStatus(r))}</td>
               </tr>
             `).join("")}
@@ -240,9 +252,9 @@ function render(){
   } 
   else if(route.page === "new"){
     app.innerHTML = `<div class="card">
-      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요?">
+      <label>제목</label><input id="t" placeholder="무엇을 사거나 하고 싶나요?">
       <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한가요?"></textarea>
-      <label>계획</label><textarea id="pl" rows="5" placeholder="어떻게 사용할 건가요?"></textarea>
+      <label>계획</label><textarea id="pl" rows="5" placeholder="계획을 자세하게 적어주세요"></textarea>
       <label>비용(원)</label><input id="c" type="text" placeholder="금액 입력" oninput="this.value=formatComma(this.value)">
       <div class="btn-row">
         <button onclick="submit()">결재올리기</button>
@@ -259,7 +271,12 @@ function render(){
         <label>제목</label><input readonly value="${esc(r.title)}">
         <label>목적</label><textarea rows="3" readonly>${esc(r.purpose)}</textarea>
         <label>계획</label><textarea rows="5" readonly>${esc(r.plan)}</textarea>
-        <label>비용(원)</label><input readonly value="${Number(r.cost).toLocaleString()}">
+        
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
+          <label style="margin-top:0;">비용(원)</label>
+          <button class="small gray" style="width:fit-content; margin:0 0 0 auto; padding: 4px 12px;" onclick="updateCost('${r.dbId}')">수정</button>
+        </div>
+        <input id="editCost" type="text" value="${formatComma(r.cost)}" oninput="this.value=formatComma(this.value)">
       </div>
       <div class="parent-result">
         <b>부모 결재 기록</b><br>
@@ -268,7 +285,7 @@ function render(){
       </div>
       <div id="parentArea"></div>
       
-      <div style="text-align:left;">
+      <div id="btnParentAuth" style="text-align:left;">
         <button class="fit" onclick="openParent('${r.id}')">부모 결재</button>
       </div>
       
