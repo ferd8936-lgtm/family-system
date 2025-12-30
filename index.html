@@ -19,7 +19,8 @@ button, .sms-btn{display:block; width:100%; padding:12px 16px;border:none;border
 button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
-input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;font-size: 16px; color: #666;font-family: inherit;}
+input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
+input::placeholder, textarea::placeholder {color: #aaa;}
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 .top-search {display: flex;gap: 8px;align-items: center;margin-bottom: 12px;}
 .top-search input {margin-top: 0;height: 48px;}
@@ -38,6 +39,7 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
+.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
@@ -61,7 +63,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// ✅ 등록하신 가족 3인의 전화번호
 const FAMILY_PHONES = ["01021165677", "01093778936", "01035005677"];
 
 let route = { page: "list", id: null };
@@ -74,13 +75,14 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 문자 URL 생성 함수 (보안 차단 해결을 위해 링크를 직접 반환) */
+/* ✅ 문자 URL 생성 함수 (확인하기 링크 삭제 반영) */
 function getSmsUrl(text) {
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
-    const link = window.location.href;
-    const fullText = `${text}\n확인하기: ${link}`;
     const phoneString = isIOS ? FAMILY_PHONES.join(",") : FAMILY_PHONES.join(";");
+    
+    // 요구사항: 확인하기 링크 삭제
+    const fullText = text; 
     
     return isIOS 
         ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
@@ -112,7 +114,6 @@ function submit(){
     const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 부탁드려요!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
-    // ✅ 버튼 대신 실제 <a> 태그(링크)를 사용하여 브라우저 차단 회피
     m.innerHTML = `
       <div class="card" style="text-align:center;">
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
@@ -123,6 +124,22 @@ function submit(){
         </div>
       </div>`;
   });
+}
+
+function askDelete(dbId){
+  const m = document.getElementById("pwModal");
+  m.style.display="flex";
+  m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
+  setTimeout(()=>document.getElementById("delPw").focus(), 100);
+}
+function authDelete(dbId){
+  if(document.getElementById("delPw").value === PASSWORD){
+    db.ref("approvals/"+dbId).remove().then(() => {
+      alert("삭제되었습니다.");
+      document.getElementById("pwModal").style.display="none";
+      navigate({page:'list'});
+    });
+  } else { alert("비밀번호가 틀렸습니다."); }
 }
 
 function openParent(id){
@@ -136,18 +153,21 @@ function authParent(id){
   document.getElementById("pwModal").style.display="none";
   const r = allData.find(x=>x.id===id);
   let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>`;
+  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><div class="btn-row"><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div></div>`;
+  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><div class="btn-row"><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div></div>`;
   document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
 }
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
-  db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
+  const updates = {};
+  updates[who] = val;
+  updates[who+"C"] = comment;
+  updates[who+"Time"] = now();
+  db.ref("approvals/"+dbId).update(updates).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
-    // ✅ 부모님 결재 완료 팝업에서도 링크 방식 적용
     m.innerHTML = `
       <div class="card" style="text-align:center;">
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 결재 완료</b>
