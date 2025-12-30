@@ -19,6 +19,7 @@ button, .sms-btn{display:block; width:100%; padding:12px 16px;border:none;border
 button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
+button.small{padding: 4px 10px; font-size: 13px; margin: 0; margin-left: 8px;}
 input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
 input::placeholder, textarea::placeholder {color: #aaa;}
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
@@ -63,6 +64,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
+// ✅ 등록하신 가족 3인의 전화번호
 const FAMILY_PHONES = ["01021165677", "01093778936", "01035005677"];
 
 let route = { page: "list", id: null };
@@ -75,18 +77,16 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 문자 URL 생성 함수 (확인하기 링크 삭제 반영) */
+/* ✅ 문자 URL 생성 함수 (확인하기 링크 삭제) */
 function getSmsUrl(text) {
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
+    // 안드로이드 호환성 위해 구분자 세미콜론(;) 사용
     const phoneString = isIOS ? FAMILY_PHONES.join(",") : FAMILY_PHONES.join(";");
     
-    // 요구사항: 확인하기 링크 삭제
-    const fullText = text; 
-    
     return isIOS 
-        ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
-        : `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
+        ? `sms:${phoneString}&body=${encodeURIComponent(text)}` 
+        : `sms:${phoneString}?body=${encodeURIComponent(text)}`;
 }
 
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
@@ -111,7 +111,7 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 부탁드려요!`;
+    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 해주세요!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -120,26 +120,10 @@ function submit(){
         <p style="color:#666; margin-bottom:20px;">가족들에게 단체 문자를 보낼까요?</p>
         <div class="btn-row">
           <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</a>
-          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
+          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
         </div>
       </div>`;
   });
-}
-
-function askDelete(dbId){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
-  setTimeout(()=>document.getElementById("delPw").focus(), 100);
-}
-function authDelete(dbId){
-  if(document.getElementById("delPw").value === PASSWORD){
-    db.ref("approvals/"+dbId).remove().then(() => {
-      alert("삭제되었습니다.");
-      document.getElementById("pwModal").style.display="none";
-      navigate({page:'list'});
-    });
-  } else { alert("비밀번호가 틀렸습니다."); }
 }
 
 function openParent(id){
@@ -159,11 +143,7 @@ function authParent(id){
 }
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
-  const updates = {};
-  updates[who] = val;
-  updates[who+"C"] = comment;
-  updates[who+"Time"] = now();
-  db.ref("approvals/"+dbId).update(updates).then(() => {
+  db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
     const m = document.getElementById("pwModal");
@@ -174,7 +154,7 @@ function decide(dbId, who, val, title){
         <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
         <div class="btn-row">
           <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">단체 문자 보내기</a>
-          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
+          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
         </div>
       </div>`;
   });
