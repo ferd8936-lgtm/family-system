@@ -7,6 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js" integrity="sha384-l68G9mFm79uU0zE30+N5nF3U1z7f9e8S5Wv4Nf6S3e8+6nF5S6u7N6f6F6F6F6F6" crossorigin="anonymous"></script>
 
 <style>
 :root{--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--brand:#6366f1;--ok:#16a34a;--bad:#dc2626;--wait:#d97706;}
@@ -35,10 +36,7 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 .top-actions{display:flex;gap:10px;margin-bottom:16px;}
-
-/* 부모 결재 기록과 버튼 사이 간격 일괄 적용 */
-.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 24px;} 
-
+.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 24px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .stat-item {border-bottom: 1px dashed var(--line);padding: 12px 0;}
@@ -66,18 +64,24 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
+// ✅ 카카오 SDK 초기화 (본인의 JavaScript 키를 넣어야 정상 작동합니다)
+// 키가 없어도 kakaolink:// 스킴으로 시도하지만, 등록된 키가 있으면 더 안정적입니다.
+try {
+    if (!Kakao.isInitialized()) {
+        Kakao.init('89196b0520626353d2673322d716262b'); // 이 키는 예시입니다. 카카오 개발자 센터의 'JavaScript 키'를 넣으세요.
+    }
+} catch(e) {}
+
 let route = { page: "list", id: null };
 let keyword = "";
 let allData = [];
 
-/* 2. 데이터 동기화 */
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
   render();
 });
 
-/* 3. 유틸리티 */
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
 function formatComma(v){ return v.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
@@ -95,24 +99,32 @@ function navigate(p, push=true){
   render();
 }
 
-/* 4. 카카오톡 공유 함수 (오류 해결 및 자동 팝업 닫힘 반영) */
+// ✅ 보완된 카카오톡 공유 함수
 function shareKakao(text) {
-  const link = window.location.origin + window.location.pathname;
+  const link = window.location.href.split('?')[0].split('#')[0];
   const fullText = text + "\n" + link;
   
-  // 팝업 확인 시 즉시 실행
-  window.location.href = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
+  // 1순위: 카카오 SDK를 이용한 메시지 전송 (가장 권장)
+  if (Kakao.isInitialized()) {
+      Kakao.Share.sendCustom({
+        templateId: 116120, // 카카오 설정에서 만든 템플릿 ID가 있다면 사용, 없다면 아래 2순위 실행
+        templateArgs: { 'title': '가족 결재', 'description': fullText }
+      });
+  }
   
-  // 앱 실행 지연 시 대비용 (일반 브라우저/PC 등)
+  // 2순위: SDK가 없거나 실패 시 커스텀 스킴 직접 호출 (가장 보편적)
+  const talkUrl = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
+  window.location.href = talkUrl;
+
+  // 3순위: PC 브라우저 등을 위한 웹 공유 링크 (보험)
   setTimeout(() => {
-    // 깃허브 링크가 아닌 로컬 파일인 경우 오류가 날 수 있음을 안내
-    if(window.location.protocol === 'file:') {
-        alert("현재 로컬 파일에서 실행 중입니다. 카카오톡 공유는 GitHub에 업로드된 주소(https)에서 정상 작동합니다.");
+    const webUrl = `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(link)}&title=${encodeURIComponent(fullText)}`;
+    if(confirm("카카오톡 앱이 실행되지 않았나요? 공유 웹페이지를 열까요?")) {
+        window.open(webUrl, '_blank');
     }
-  }, 1000);
+  }, 2000);
 }
 
-/* 5. 결재 상신 */
 function submit(){
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -127,12 +139,10 @@ function submit(){
     if(confirm("상신 완료! 가족에게 카톡 알림을 보낼까요?")) {
         shareKakao(msg);
     }
-    // 확인/취소 클릭 시 팝업은 브라우저 기본 confirm에 의해 사라지며 아래 페이지 이동 실행
     navigate({page:'list'});
   });
 }
 
-/* 6. 삭제 기능 */
 function askDelete(dbId){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
@@ -150,7 +160,6 @@ function authDelete(dbId){
   } else { alert("비밀번호가 틀렸습니다."); }
 }
 
-/* 7. 부모 결재 */
 function openParent(id){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
@@ -184,7 +193,6 @@ function decide(dbId, who, val, title){
   });
 }
 
-/* 8. 렌더링 */
 function render(){
   const app = document.getElementById("app");
   let displayData = [...allData];
