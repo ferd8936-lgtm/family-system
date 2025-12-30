@@ -35,7 +35,10 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 .top-actions{display:flex;gap:10px;margin-bottom:16px;}
-.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6;}
+
+/* 부모 결재 기록과 버튼 사이 간격 일괄 적용 */
+.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 24px;} 
+
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .stat-item {border-bottom: 1px dashed var(--line);padding: 12px 0;}
@@ -92,7 +95,24 @@ function navigate(p, push=true){
   render();
 }
 
-/* 4. 결재 상신 및 카톡 메시지 */
+/* 4. 카카오톡 공유 함수 (오류 해결 및 자동 팝업 닫힘 반영) */
+function shareKakao(text) {
+  const link = window.location.origin + window.location.pathname;
+  const fullText = text + "\n" + link;
+  
+  // 팝업 확인 시 즉시 실행
+  window.location.href = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
+  
+  // 앱 실행 지연 시 대비용 (일반 브라우저/PC 등)
+  setTimeout(() => {
+    // 깃허브 링크가 아닌 로컬 파일인 경우 오류가 날 수 있음을 안내
+    if(window.location.protocol === 'file:') {
+        alert("현재 로컬 파일에서 실행 중입니다. 카카오톡 공유는 GitHub에 업로드된 주소(https)에서 정상 작동합니다.");
+    }
+  }, 1000);
+}
+
+/* 5. 결재 상신 */
 function submit(){
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -103,15 +123,16 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `📢 새로운 결재가 도착했어요!\n제목: ${t}\n비용: ${formatComma(rawC)}원\n확인하기: ${window.location.href}`;
+    const msg = `[결재요청] ${t}\n엄마, 아빠 결재 해주세요!`;
     if(confirm("상신 완료! 가족에게 카톡 알림을 보낼까요?")) {
-        window.location.href = "kakaolink://send?text=" + encodeURIComponent(msg);
+        shareKakao(msg);
     }
+    // 확인/취소 클릭 시 팝업은 브라우저 기본 confirm에 의해 사라지며 아래 페이지 이동 실행
     navigate({page:'list'});
   });
 }
 
-/* 5. 삭제 기능 (UI 통일) */
+/* 6. 삭제 기능 */
 function askDelete(dbId){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
@@ -120,19 +141,16 @@ function askDelete(dbId){
 }
 
 function authDelete(dbId){
-  const pw = document.getElementById("delPw").value;
-  if(pw === PASSWORD){
+  if(document.getElementById("delPw").value === PASSWORD){
     db.ref("approvals/"+dbId).remove().then(() => {
       alert("삭제되었습니다.");
       document.getElementById("pwModal").style.display="none";
       navigate({page:'list'});
     });
-  } else {
-    alert("비밀번호가 틀렸습니다.");
-  }
+  } else { alert("비밀번호가 틀렸습니다."); }
 }
 
-/* 6. 부모 결재 */
+/* 7. 부모 결재 */
 function openParent(id){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
@@ -144,19 +162,29 @@ function authParent(id){
   document.getElementById("pwModal").style.display="none";
   const r = allData.find(x=>x.id===id);
   let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','mom','approve')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject')">반려</button></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject')">반려</button></div>`;
+  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div>`;
+  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>`;
   document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
 }
-function decide(dbId, who, val){
+function decide(dbId, who, val, title){
+  const comment = document.getElementById(who+"C").value;
   const updates = {};
   updates[who] = val;
-  updates[who+"C"] = document.getElementById(who+"C").value;
+  updates[who+"C"] = comment;
   updates[who+"Time"] = now();
-  db.ref("approvals/"+dbId).update(updates).then(() => navigate({page:'list'}));
+  
+  db.ref("approvals/"+dbId).update(updates).then(() => {
+    const resultStr = val === 'approve' ? '✅승인' : '❌반려';
+    const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
+    
+    if(confirm("결재가 완료되었습니다! 결과를 카톡으로 공유할까요?")) {
+        shareKakao(msg);
+    }
+    navigate({page:'list'});
+  });
 }
 
-/* 7. 렌더링 */
+/* 8. 렌더링 */
 function render(){
   const app = document.getElementById("app");
   let displayData = [...allData];
