@@ -7,7 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js" integrity="sha384-l68G9mFm79uU0zE30+N5nF3U1z7f9e8S5Wv4Nf6S3e8+6nF5S6u7N6f6F6F6F6F6" crossorigin="anonymous"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js" crossorigin="anonymous"></script>
 
 <style>
 :root{--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--brand:#6366f1;--ok:#16a34a;--bad:#dc2626;--wait:#d97706;}
@@ -36,11 +36,18 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 .top-actions{display:flex;gap:10px;margin-bottom:16px;}
-.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 24px;}
+
+/* 상세페이지 부모결재 기록 박스 하단 간격 조정 */
+.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;} 
+
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .stat-item {border-bottom: 1px dashed var(--line);padding: 12px 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
+
+/* 버튼 그룹 가로 배치 */
+.btn-row {display: flex; gap: 10px; margin-top: 20px;}
+.btn-row button {flex: 1; margin: 0;}
 </style>
 </head>
 <body>
@@ -64,13 +71,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// ✅ 카카오 SDK 초기화 (본인의 JavaScript 키를 넣어야 정상 작동합니다)
-// 키가 없어도 kakaolink:// 스킴으로 시도하지만, 등록된 키가 있으면 더 안정적입니다.
-try {
-    if (!Kakao.isInitialized()) {
-        Kakao.init('89196b0520626353d2673322d716262b'); // 이 키는 예시입니다. 카카오 개발자 센터의 'JavaScript 키'를 넣으세요.
-    }
-} catch(e) {}
+// 카카오 초기화 (자신의 키 사용 권장)
+try { Kakao.init('89196b0520626353d2673322d716262b'); } catch(e){}
 
 let route = { page: "list", id: null };
 let keyword = "";
@@ -99,32 +101,14 @@ function navigate(p, push=true){
   render();
 }
 
-// ✅ 보완된 카카오톡 공유 함수
+/* 카카오톡 공유 실행 함수 */
 function shareKakao(text) {
-  const link = window.location.href.split('?')[0].split('#')[0];
+  const link = window.location.origin + window.location.pathname;
   const fullText = text + "\n" + link;
-  
-  // 1순위: 카카오 SDK를 이용한 메시지 전송 (가장 권장)
-  if (Kakao.isInitialized()) {
-      Kakao.Share.sendCustom({
-        templateId: 116120, // 카카오 설정에서 만든 템플릿 ID가 있다면 사용, 없다면 아래 2순위 실행
-        templateArgs: { 'title': '가족 결재', 'description': fullText }
-      });
-  }
-  
-  // 2순위: SDK가 없거나 실패 시 커스텀 스킴 직접 호출 (가장 보편적)
-  const talkUrl = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
-  window.location.href = talkUrl;
-
-  // 3순위: PC 브라우저 등을 위한 웹 공유 링크 (보험)
-  setTimeout(() => {
-    const webUrl = `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(link)}&title=${encodeURIComponent(fullText)}`;
-    if(confirm("카카오톡 앱이 실행되지 않았나요? 공유 웹페이지를 열까요?")) {
-        window.open(webUrl, '_blank');
-    }
-  }, 2000);
+  window.location.href = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
 }
 
+/* 4. 결재 상신 및 커스텀 모달 알림 */
 function submit(){
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -136,10 +120,19 @@ function submit(){
   
   db.ref("approvals").push(newPost).then(() => {
     const msg = `[결재요청] ${t}\n엄마, 아빠 결재 해주세요!`;
-    if(confirm("상신 완료! 가족에게 카톡 알림을 보낼까요?")) {
-        shareKakao(msg);
-    }
-    navigate({page:'list'});
+    
+    // 부모결재 UI와 동일한 카카오톡 공유 팝업 띄우기
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
+        <p style="color:#666; margin-bottom:20px;">가족에게 카카오톡 알림을 보낼까요?</p>
+        <div style="display:flex; gap:10px;">
+          <button style="flex:1; margin:0;" onclick="shareKakao('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">확인</button>
+          <button class="gray" style="flex:1; margin:0;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
+        </div>
+      </div>`;
   });
 }
 
@@ -166,6 +159,7 @@ function openParent(id){
   m.innerHTML=`<div class="card"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
   setTimeout(()=>document.getElementById("pw").focus(), 100);
 }
+
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
@@ -175,6 +169,7 @@ function authParent(id){
   if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>`;
   document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
 }
+
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
   const updates = {};
@@ -186,10 +181,17 @@ function decide(dbId, who, val, title){
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
     
-    if(confirm("결재가 완료되었습니다! 결과를 카톡으로 공유할까요?")) {
-        shareKakao(msg);
-    }
-    navigate({page:'list'});
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `
+      <div class="card" style="text-align:center;">
+        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 결재 완료</b>
+        <p style="color:#666; margin-bottom:20px;">결과를 카카오톡으로 공유할까요?</p>
+        <div style="display:flex; gap:10px;">
+          <button style="flex:1; margin:0;" onclick="shareKakao('${msg}'); navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">확인</button>
+          <button class="gray" style="flex:1; margin:0;" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">닫기</button>
+        </div>
+      </div>`;
   });
 }
 
@@ -225,7 +227,10 @@ function render(){
       <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한지(목표/이유)를 써보세요"></textarea>
       <label>계획</label><textarea id="pl" rows="5" placeholder="앞으로 무엇을 어떻게 할 건지 자세하게 써보세요"></textarea>
       <label>비용(원)</label><input id="c" type="text" placeholder="얼마인지 자유롭게 생각하고 써보세요" oninput="this.value=formatComma(this.value)">
-      <button onclick="submit()">결재올리기</button><button class="gray" onclick="navigate({page:'list'})">취소</button>
+      <div class="btn-row">
+        <button onclick="submit()">결재올리기</button>
+        <button class="gray" onclick="navigate({page:'list'})">취소</button>
+      </div>
     </div>`;
   }
   else if(route.page === "view"){
@@ -245,10 +250,10 @@ function render(){
         아빠: ${transKo(r.dad)} / ${esc(r.dadC||"-")}
       </div>
       <div id="parentArea"></div>
-      <button onclick="openParent('${r.id}')">부모 결재</button>
-      <div style="display:flex; gap:10px;">
-        <button class="gray" style="flex:1" onclick="navigate({page:'list'})">목록</button>
-        <button class="red" style="flex:1" onclick="askDelete('${r.dbId}')">삭제</button>
+      <button style="width:100%;" onclick="openParent('${r.id}')">부모 결재</button>
+      <div class="btn-row">
+        <button class="gray" onclick="navigate({page:'list'})">목록</button>
+        <button class="red" onclick="askDelete('${r.dbId}')">삭제</button>
       </div>`;
   }
 }
