@@ -31,23 +31,17 @@ label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify
 table{width:100%; border-collapse:collapse; position: relative;}
 thead th {position: sticky;top: 0;background: #fdfdfd;z-index: 10;border-bottom: 2px solid var(--line);}
 th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
-tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;-webkit-touch-callout: none;}
+tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
 td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:1.35;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 .top-actions{display:flex;gap:10px;margin-bottom:16px;}
-
-/* 상세페이지 부모결재 기록 박스 하단 간격 조정 */
-.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;} 
-
+.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
-.stat-item {border-bottom: 1px dashed var(--line);padding: 12px 0;}
-.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
-
-/* 버튼 그룹 가로 배치 */
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
 .btn-row button {flex: 1; margin: 0;}
+.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 </style>
 </head>
 <body>
@@ -71,8 +65,12 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// 카카오 초기화 (자신의 키 사용 권장)
-try { Kakao.init('89196b0520626353d2673322d716262b'); } catch(e){}
+// ✅ 제공해주신 JavaScript 키 적용 완료
+try {
+    if (!Kakao.isInitialized()) {
+        Kakao.init('26e990028f2acdd8db09ffa1c4e10c17'); 
+    }
+} catch(e) { console.error("카카오 초기화 실패", e); }
 
 let route = { page: "list", id: null };
 let keyword = "";
@@ -84,6 +82,13 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
+/* 카카오톡 공유 함수 (안정적인 스킴 직접 호출 방식) */
+function shareKakao(text) {
+  const link = window.location.origin + window.location.pathname;
+  // 도메인이 등록되어 있어야 이 링크가 정상적으로 앱을 호출합니다.
+  window.location.href = `kakaolink://send?text=${encodeURIComponent(text + "\n" + link)}`;
+}
+
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
 function formatComma(v){ return v.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
@@ -94,21 +99,9 @@ function getStatus(r){
 }
 function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?'no':'wait')}">${s}</span>`; }
 function transKo(v){ return v === "approve" ? "승인" : (v === "reject" ? "반려" : "대기"); }
+function navigate(p, push=true){ route = p; if(push) history.pushState(route,""); render(); }
 
-function navigate(p, push=true){
-  route = p;
-  if(push) history.pushState(route,"");
-  render();
-}
-
-/* 카카오톡 공유 실행 함수 */
-function shareKakao(text) {
-  const link = window.location.origin + window.location.pathname;
-  const fullText = text + "\n" + link;
-  window.location.href = `kakaolink://send?text=${encodeURIComponent(fullText)}`;
-}
-
-/* 4. 결재 상신 및 커스텀 모달 알림 */
+/* 결재 상신 모달 */
 function submit(){
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -120,8 +113,6 @@ function submit(){
   
   db.ref("approvals").push(newPost).then(() => {
     const msg = `[결재요청] ${t}\n엄마, 아빠 결재 해주세요!`;
-    
-    // 부모결재 UI와 동일한 카카오톡 공유 팝업 띄우기
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -136,13 +127,13 @@ function submit(){
   });
 }
 
+/* 삭제 기능 */
 function askDelete(dbId){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
   m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
   setTimeout(()=>document.getElementById("delPw").focus(), 100);
 }
-
 function authDelete(dbId){
   if(document.getElementById("delPw").value === PASSWORD){
     db.ref("approvals/"+dbId).remove().then(() => {
@@ -153,13 +144,13 @@ function authDelete(dbId){
   } else { alert("비밀번호가 틀렸습니다."); }
 }
 
+/* 부모 결재 */
 function openParent(id){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
   m.innerHTML=`<div class="card"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
   setTimeout(()=>document.getElementById("pw").focus(), 100);
 }
-
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
@@ -169,18 +160,15 @@ function authParent(id){
   if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','dad','reject','${r.title}')">반려</button></div>`;
   document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
 }
-
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
   const updates = {};
   updates[who] = val;
   updates[who+"C"] = comment;
   updates[who+"Time"] = now();
-  
   db.ref("approvals/"+dbId).update(updates).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
-    
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -257,7 +245,6 @@ function render(){
       </div>`;
   }
 }
-
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function openStats(){
   const stats = {};
@@ -270,9 +257,8 @@ function openStats(){
   const sorted = Object.keys(stats).sort().reverse();
   const m = document.getElementById("statModal");
   m.style.display="flex";
-  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원)<br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
+  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
 }
-
 window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } };
 history.replaceState({page:'list'}, "");
 </script>
