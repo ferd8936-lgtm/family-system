@@ -51,7 +51,6 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 <div id="statModal" class="modal"></div>
 
 <script>
-/* 1. 설정 */
 const firebaseConfig = {
   apiKey: "AIzaSyC4wyLWlZSDwNN8pqMSxiebB9z5CWrc93E",
   authDomain: "family-systems-4d19c.firebaseapp.com",
@@ -65,12 +64,12 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// ✅ 제공해주신 JavaScript 키 적용 완료
+// ✅ 카카오 초기화
 try {
     if (!Kakao.isInitialized()) {
         Kakao.init('26e990028f2acdd8db09ffa1c4e10c17'); 
     }
-} catch(e) { console.error("카카오 초기화 실패", e); }
+} catch(e) {}
 
 let route = { page: "list", id: null };
 let keyword = "";
@@ -82,11 +81,37 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* 카카오톡 공유 함수 (안정적인 스킴 직접 호출 방식) */
+/* ✅ 카카오톡 공유 실행 함수 (공식 SDK 방식 - 경로 오류 해결) */
 function shareKakao(text) {
-  const link = window.location.origin + window.location.pathname;
-  // 도메인이 등록되어 있어야 이 링크가 정상적으로 앱을 호출합니다.
-  window.location.href = `kakaolink://send?text=${encodeURIComponent(text + "\n" + link)}`;
+  // 현재 접속 중인 정확한 전체 URL을 가져옵니다.
+  const link = window.location.href;
+  
+  if (Kakao.isInitialized()) {
+      Kakao.Share.sendDefault({
+          objectType: 'feed',
+          content: {
+              title: '가족 결재 시스템 알림',
+              description: text,
+              imageUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              link: {
+                  mobileWebUrl: link,
+                  webUrl: link,
+              },
+          },
+          buttons: [
+              {
+                  title: '결재 확인하기',
+                  link: {
+                      mobileWebUrl: link,
+                      webUrl: link,
+                  },
+              },
+          ],
+      });
+  } else {
+      // SDK 미초기화 대비 보험 로직
+      window.location.href = `kakaolink://send?text=${encodeURIComponent(text + "\n" + link)}`;
+  }
 }
 
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
@@ -101,7 +126,6 @@ function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?
 function transKo(v){ return v === "approve" ? "승인" : (v === "reject" ? "반려" : "대기"); }
 function navigate(p, push=true){ route = p; if(push) history.pushState(route,""); render(); }
 
-/* 결재 상신 모달 */
 function submit(){
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -127,7 +151,6 @@ function submit(){
   });
 }
 
-/* 삭제 기능 */
 function askDelete(dbId){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
@@ -144,7 +167,6 @@ function authDelete(dbId){
   } else { alert("비밀번호가 틀렸습니다."); }
 }
 
-/* 부모 결재 */
 function openParent(id){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
