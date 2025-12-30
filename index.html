@@ -41,6 +41,15 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
 .btn-row button {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
+
+/* 통계 데이터 간격 수정 */
+.stat-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 15px; /* 내부 간격 확대 */
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
 </style>
 </head>
 <body>
@@ -63,7 +72,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// ✅ 가족 3인의 전화번호
+// ✅ 등록하신 가족 3인의 전화번호
 const FAMILY_PHONES = ["01021165677", "01093778936", "01035005677"];
 
 let route = { page: "list", id: null };
@@ -76,14 +85,17 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 단체 문자 전송 함수 */
+/* ✅ 문자 발송 로직 수정 (팝업 클릭 시 실행되는 함수) */
 function sendGroupSMS(text) {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const link = window.location.href;
     const fullText = `${text}\n확인하기: ${link}`;
-    const phoneString = FAMILY_PHONES.join(",");
     
-    // iOS는 콤마(,), 안드로이드는 세미콜론(;)을 사용하기도 하지만 최근 콤마가 공통적으로 잘 작동합니다.
+    // 기종별 전화번호 구분자 설정 (iOS: 콤마, Android: 세미콜론)
+    const sep = isIOS ? "," : ";";
+    const phoneString = FAMILY_PHONES.join(sep);
+    
+    // 최종 SMS URL 생성
     const smsUrl = isIOS 
         ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
         : `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
