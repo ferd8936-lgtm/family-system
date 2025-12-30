@@ -100,7 +100,7 @@ function submit(){
   const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
   if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
 
-  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom:"pending", dad:"pending", momC:"", dadC:"", momTime:"", dadTime:"" };
+  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
     const msg = `📢 새로운 결재가 도착했어요!\n제목: ${t}\n비용: ${formatComma(rawC)}원\n확인하기: ${window.location.href}`;
@@ -111,15 +111,23 @@ function submit(){
   });
 }
 
-/* 5. 삭제 기능 (비밀번호 확인) */
+/* 5. 삭제 기능 (UI 통일) */
 function askDelete(dbId){
-  const pw = prompt("삭제하시겠습니까? 비밀번호를 입력하세요.");
+  const m = document.getElementById("pwModal");
+  m.style.display="flex";
+  m.innerHTML=`<div class="card"><b>결재 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><button onclick="authDelete('${dbId}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
+  setTimeout(()=>document.getElementById("delPw").focus(), 100);
+}
+
+function authDelete(dbId){
+  const pw = document.getElementById("delPw").value;
   if(pw === PASSWORD){
     db.ref("approvals/"+dbId).remove().then(() => {
       alert("삭제되었습니다.");
+      document.getElementById("pwModal").style.display="none";
       navigate({page:'list'});
     });
-  } else if(pw !== null) {
+  } else {
     alert("비밀번호가 틀렸습니다.");
   }
 }
@@ -129,6 +137,7 @@ function openParent(id){
   const m = document.getElementById("pwModal");
   m.style.display="flex";
   m.innerHTML=`<div class="card"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`;
+  setTimeout(()=>document.getElementById("pw").focus(), 100);
 }
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
@@ -147,7 +156,7 @@ function decide(dbId, who, val){
   db.ref("approvals/"+dbId).update(updates).then(() => navigate({page:'list'}));
 }
 
-/* 7. 렌더링 (원래 UI 복원) */
+/* 7. 렌더링 */
 function render(){
   const app = document.getElementById("app");
   let displayData = [...allData];
@@ -176,10 +185,10 @@ function render(){
   } 
   else if(route.page === "new"){
     app.innerHTML = `<div class="card">
-      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요?">
-      <label>목적</label><textarea id="p" rows="3"></textarea>
-      <label>계획</label><textarea id="pl" rows="5"></textarea>
-      <label>비용(원)</label><input id="c" type="text" oninput="this.value=formatComma(this.value)">
+      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요? 또는 하고 싶나요?">
+      <label>목적</label><textarea id="p" rows="3" placeholder="왜 필요한지(목표/이유)를 써보세요"></textarea>
+      <label>계획</label><textarea id="pl" rows="5" placeholder="앞으로 무엇을 어떻게 할 건지 자세하게 써보세요"></textarea>
+      <label>비용(원)</label><input id="c" type="text" placeholder="얼마인지 자유롭게 생각하고 써보세요" oninput="this.value=formatComma(this.value)">
       <button onclick="submit()">결재올리기</button><button class="gray" onclick="navigate({page:'list'})">취소</button>
     </div>`;
   }
