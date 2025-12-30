@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>가족 결재시스템 (최종 수정본)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+<title>가족 결재시스템 (최종 공유형)</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -44,13 +44,13 @@ td.title{text-align:left;display:flex;flex-direction:column;gap:4px;line-height:
 </head>
 <body>
 <header>가족 결재시스템</header>
-<main id="app">데이터를 불러오는 중입니다...</main>
+<main id="app">DB 연결 중...</main>
 <div id="pwModal" class="modal"></div>
 <div id="statModal" class="modal"></div>
 
 <script>
 /* =========================
-   1. Firebase 설정
+   1. Firebase 설정 (고객님 키값 적용)
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyC4wyLWlZSDwNN8pqMSxiebB9z5CWrc93E",
@@ -70,7 +70,7 @@ let route = { page: "list", id: null };
 let keyword = "";
 let allData = [];
 
-// DB 실시간 동기화 및 렌더링
+// DB 실시간 감시
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
@@ -107,7 +107,7 @@ function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?
 function transKo(v){ return v === "approve" ? "승인" : (v === "reject" ? "반려" : "대기"); }
 
 /* =========================
-   데이터 조작 로직
+   데이터 동작 (삭제 로직 보완)
 ========================= */
 function submit(){
   const title = document.getElementById("t").value.trim();
@@ -119,12 +119,31 @@ function submit(){
   db.ref("approvals").push(newPost).then(() => navigate({page:"list"}));
 }
 
-function removeData(dbId){
-  if(confirm("이 결재 건을 정말 삭제하시겠습니까?")) {
-    db.ref("approvals/" + dbId).remove().then(() => {
-      alert("삭제되었습니다.");
-    }).catch(err => alert("삭제 실패: " + err));
-  }
+// 꾹 누르기(삭제) 로직 정교화
+let pressTimer, longPress = false;
+function startPress(dbId) {
+    longPress = false;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+        longPress = true;
+        if (confirm("이 결재 건을 삭제하시겠습니까?")) {
+            db.ref("approvals/" + dbId).remove()
+              .then(() => alert("삭제되었습니다."))
+              .catch(e => alert("삭제 권한 오류: " + e.message));
+        }
+    }, 800); // 0.8초 꾹 누르기
+}
+
+function cancelPress() {
+    clearTimeout(pressTimer);
+}
+
+function rowClick(id) {
+    if (longPress) {
+        longPress = false; // 롱프레스 직후 클릭 방지
+        return;
+    }
+    navigate({page: "view", id});
 }
 
 function updateCost(dbId){
@@ -143,7 +162,7 @@ function decide(who, val){
 }
 
 /* =========================
-   UI 렌더링
+   렌더링
 ========================= */
 function render(){
   const app = document.getElementById("app");
@@ -163,7 +182,7 @@ function render(){
               <tr class="approval-row" 
                   onmousedown="startPress('${r.dbId}')" onmouseup="cancelPress()" 
                   ontouchstart="startPress('${r.dbId}')" ontouchend="cancelPress()" 
-                  onmousemove="cancelPress()" ontouchmove="cancelPress()" 
+                  onmousemove="cancelPress()" ontouchmove="cancelPress()"
                   onclick="rowClick('${r.id}')">
                 <td>${displayData.length - i}</td>
                 <td class="title"><div>${esc(r.title)}</div><small>${r.time}</small></td>
@@ -205,37 +224,10 @@ function render(){
   }
 }
 
-/* 롱프레스 및 기타 보조 함수 */
-let pressTimer, longPress = false;
-function startPress(dbId){ 
-  longPress = false; 
-  clearTimeout(pressTimer); 
-  pressTimer = setTimeout(() => { 
-    longPress = true; 
-    removeData(dbId); 
-  }, 800); 
-}
-function cancelPress(){ clearTimeout(pressTimer); }
-function rowClick(id){ if(!longPress) navigate({page:"view", id}); }
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function enableCostEdit(){ const i=document.getElementById('costInput'); const b=event.target; if(i.readOnly){ i.readOnly=false; i.focus(); b.innerText="저장"; } else { updateCost(allData.find(x=>x.id===route.id).dbId); } }
-
-function openParent(id){ 
-  const modal = document.getElementById("pwModal");
-  modal.style.display="flex"; 
-  modal.innerHTML=`<div class="card"><b>부모 결재</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`; 
-}
-
-function authParent(id){ 
-  if(document.getElementById("pw").value!==PASSWORD) return; 
-  document.getElementById("pwModal").style.display="none"; 
-  const r=allData.find(x=>x.id===id); 
-  let h=""; 
-  if((r.mom||"pending")==="pending") h+=`<div class="card"><b>엄마</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('mom','approve')">승인</button><button class="red" onclick="decide('mom','reject')">반려</button></div>`; 
-  if((r.dad||"pending")==="pending") h+=`<div class="card"><b>아빠</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('dad','approve')">승인</button><button class="red" onclick="decide('dad','reject')">반려</button></div>`; 
-  document.getElementById("parent").innerHTML=h; 
-}
-
+function openParent(id){ const m=document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card"><b>부모 결재</b><input id="pw" type="password" placeholder="비밀번호"><button onclick="authParent('${id}')">확인</button><button class="gray" onclick="this.parentNode.parentNode.style.display='none'">닫기</button></div>`; }
+function authParent(id){ if(document.getElementById("pw").value!==PASSWORD) return; document.getElementById("pwModal").style.display="none"; const r=allData.find(x=>x.id===id); let h=""; if((r.mom||"pending")==="pending") h+=`<div class="card"><b>엄마</b><textarea id="momC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('mom','approve')">승인</button><button class="red" onclick="decide('mom','reject')">반려</button></div>`; if((r.dad||"pending")==="pending") h+=`<div class="card"><b>아빠</b><textarea id="dadC" rows="3" placeholder="의견"></textarea><button class="green" onclick="decide('dad','approve')">승인</button><button class="red" onclick="decide('dad','reject')">반려</button></div>`; document.getElementById("parent").innerHTML=h; }
 function openStats(){
   const stats = {};
   allData.filter(x => getStatus(x) !== "대기").forEach(item => {
@@ -245,9 +237,9 @@ function openStats(){
     if(s==="승인"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; }
   });
   const sorted = Object.keys(stats).sort().reverse();
-  const modal = document.getElementById("statModal");
-  modal.style.display="flex";
-  modal.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원)<br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
+  const m = document.getElementById("statModal");
+  m.style.display="flex";
+  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원)<br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
 }
 
 history.replaceState({page:'list'}, "");
