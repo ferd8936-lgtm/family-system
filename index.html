@@ -15,19 +15,22 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-s
 header{padding:16px;text-align:center;font-size:20px;font-weight:700;background:#fff;border-bottom:1px solid var(--line);}
 main{max-width:1100px;margin:auto;padding:16px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
-button{padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; width: 100%;}
+button{padding:12px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; width:100%;}
 button.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
-input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
-label{font-weight:600;margin-top:14px;display:block;}
+input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;font-size: 16px; color: #666;font-family: inherit;}
+label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
+.top-search {display: flex;gap: 8px;align-items: center;margin-bottom: 12px;}
+.top-search input {margin-top: 0;height: 48px; flex:1;}
+.top-search button {height: 48px;margin: 0;width: 80px;}
 .table-wrapper {max-height: 540px;overflow-y: auto;border: 1px solid var(--line);border-radius: 8px;}
 table{width:100%; border-collapse:collapse;}
 th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
-.modal .card{width:min(480px,100%);}
+.modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .btn-row {display: flex; gap: 10px; margin-top: 20px;}
 .btn-row button {flex: 1; margin: 0;}
 </style>
@@ -36,6 +39,7 @@ th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertica
 <header>가족 결재시스템</header>
 <main id="app">데이터 로딩 중...</main>
 <div id="pwModal" class="modal"></div>
+<div id="statModal" class="modal"></div>
 
 <script>
 const firebaseConfig = {
@@ -51,10 +55,11 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// ✅ 등록하신 3개의 전화번호
+// ✅ 등록하신 가족 3인의 전화번호
 const FAMILY_PHONES = ["01021165677", "01093778936", "01035005677"];
 
 let route = { page: "list", id: null };
+let keyword = "";
 let allData = [];
 
 db.ref("approvals").on("value", (snapshot) => {
@@ -68,15 +73,10 @@ function sendGroupSMS(text) {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const link = window.location.href;
     const fullText = `${text}\n확인: ${link}`;
-    
-    // 전화번호들을 구분자로 합칩니다 (iOS는 콤마, 안드로이드는 세미콜론을 주로 사용하나 콤마가 범용적입니다)
     const phoneString = FAMILY_PHONES.join(",");
-    
-    // iOS와 안드로이드의 문자 전송 규격에 맞춤
     const smsUrl = isIOS 
         ? `sms:${phoneString}&body=${encodeURIComponent(fullText)}` 
         : `sms:${phoneString}?body=${encodeURIComponent(fullText)}`;
-    
     window.location.href = smsUrl;
 }
 
@@ -91,16 +91,18 @@ function getStatus(r){
 function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?'no':'wait')}">${s}</span>`; }
 function navigate(p){ route = p; render(); }
 
+/* 결재 상신 (이전의 목적, 계획 필드 복구) */
 function submit(){
   const t = document.getElementById("t").value.trim();
-  const c = document.getElementById("c").value.replace(/,/g, '').trim();
   const p = document.getElementById("p").value.trim();
-  if(!t || !c || !p) return alert("빈칸을 채워주세요.");
+  const pl = document.getElementById("pl").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
+  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
 
-  const newPost = { id: Date.now().toString(), title:t, cost:c, purpose:p, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "" };
+  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[결재요청] ${t}\n금액: ${Number(c).toLocaleString()}원\n결재 부탁드립니다!`;
+    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n결재 부탁드려요!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -113,22 +115,12 @@ function submit(){
   });
 }
 
-function openParent(id){
-  const pw = prompt("비밀번호를 입력하세요.");
-  if(pw !== PASSWORD) return alert("틀렸습니다.");
-  const r = allData.find(x=>x.id===id);
-  navigate({page:'view', id: id, auth: true});
-}
-
+/* 결재 결정 */
 function decide(dbId, who, val, title){
   const comment = document.getElementById(who+"C").value;
-  const updates = {};
-  updates[who] = val;
-  updates[who+"C"] = comment;
-  db.ref("approvals/"+dbId).update(updates).then(() => {
+  db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment }).then(() => {
     const resultStr = val === 'approve' ? '✅승인' : '❌반려';
     const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.`;
-    
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `
@@ -143,14 +135,22 @@ function decide(dbId, who, val, title){
 
 function render(){
   const app = document.getElementById("app");
+  let displayData = [...allData];
+  if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
+  displayData.sort((a,b) => b.time.localeCompare(a.time));
+
   if(route.page === "list"){
     app.innerHTML = `
-      <button onclick="navigate({page:'new'})" style="margin-bottom:16px;">+ 새 결재 요청</button>
+      <div class="top-search"><input id="q" placeholder="검색어 입력" value="${esc(keyword)}"><button class="gray" onclick="keyword=document.getElementById('q').value; render();">검색</button></div>
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <button onclick="navigate({page:'new'})">결재올리기</button>
+        <button class="gray" onclick="openStats()">통계</button>
+      </div>
       <div class="table-wrapper">
         <table>
           <thead><tr><th>제목 / 시간</th><th>상태</th></tr></thead>
           <tbody>
-            ${allData.sort((a,b)=>b.time.localeCompare(a.time)).map(r=>`
+            ${displayData.map(r=>`
               <tr onclick="navigate({page:'view', id:'${r.id}'})">
                 <td style="text-align:left;"><b>${esc(r.title)}</b><br><small>${r.time}</small></td>
                 <td>${badge(getStatus(r))}</td>
@@ -161,9 +161,10 @@ function render(){
       </div>`;
   } else if(route.page === "new"){
     app.innerHTML = `<div class="card">
-      <label>제목</label><input id="t" placeholder="예: 문제집 구매">
-      <label>금액(원)</label><input id="c" type="text" oninput="this.value=formatComma(this.value)">
-      <label>이유</label><textarea id="p" rows="4"></textarea>
+      <label>제목</label><input id="t" placeholder="무엇을 사고 싶나요?">
+      <label>목적</label><textarea id="p" rows="2" placeholder="왜 필요한가요?"></textarea>
+      <label>상세 계획</label><textarea id="pl" rows="4" placeholder="어떻게 사용할 건가요?"></textarea>
+      <label>비용(원)</label><input id="c" type="text" oninput="this.value=formatComma(this.value)">
       <button onclick="submit()">결재 상신</button>
       <button class="gray" onclick="navigate({page:'list'})">취소</button>
     </div>`;
@@ -172,7 +173,8 @@ function render(){
     app.innerHTML = `<div class="card">
       <h3>${esc(r.title)}</h3>
       <p><b>금액:</b> ${Number(r.cost).toLocaleString()}원</p>
-      <p><b>이유:</b> ${esc(r.purpose)}</p>
+      <p><b>목적:</b> ${esc(r.purpose)}</p>
+      <p><b>계획:</b> ${esc(r.plan)}</p>
       <hr>
       <label>엄마 결재</label><textarea id="momC" rows="2" placeholder="의견">${esc(r.momC)}</textarea>
       <div class="btn-row"><button class="green" onclick="decide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="red" onclick="decide('${r.dbId}','mom','reject','${r.title}')">반려</button></div>
@@ -181,6 +183,16 @@ function render(){
       <button class="gray" style="margin-top:20px;" onclick="navigate({page:'list'})">목록으로</button>
     </div>`;
   }
+}
+
+function openStats(){
+  const stats = {};
+  allData.filter(x => getStatus(x) !== "대기").forEach(item => {
+    const key = item.time.substring(0,7);
+    if(!stats[key]) stats[key] = {app:0, appS:0};
+    if(getStatus(item)==="승인"){ stats[key].app++; stats[key].appS+=Number(item.cost); }
+  });
+  alert(Object.keys(stats).map(k => `[${k}] 승인: ${stats[k].app}건 / 합계: ${stats[k].appS.toLocaleString()}원`).join("\n") || "통계 데이터가 없습니다.");
 }
 render();
 </script>
