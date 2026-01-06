@@ -28,9 +28,9 @@ input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(
 input::placeholder, textarea::placeholder {color: #aaa;}
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 
-/* ✅ 5번: 목적 2줄, 계획 3줄 고정 및 스크롤 */
-textarea.purpose-box { height: calc(1.4em * 2 + 24px) !important; overflow-y: auto; resize: none; }
-textarea.plan-box { height: calc(1.4em * 3 + 24px) !important; overflow-y: auto; resize: none; }
+/* ✅ 목적 2줄 대비 20% 확대, 계획 3줄 대비 30% 확대 반영 */
+textarea.purpose-box { height: calc((1.4em * 2 + 24px) * 1.2) !important; overflow-y: auto; resize: none; }
+textarea.plan-box { height: calc((1.4em * 3 + 24px) * 1.3) !important; overflow-y: auto; resize: none; }
 
 .top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start;}
 .btn-submit, .btn-stats {width: auto !important; margin: 0 !important; padding: 9px 20px !important;}
@@ -89,11 +89,9 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-/* ✅ 3번: 아이폰 단체문자 발송 문제 해결 */
 function getSmsUrl(text) {
     const ua = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
-    // iOS는 구분자를 &로 연결하거나 전용 포맷을 사용해야 할 때가 있으나 가장 확실한 콤마 유지 및 수동 트리거 방식 보강
     const phoneString = FAMILY_PHONES.join(",");
     
     return isIOS 
@@ -200,7 +198,6 @@ function authParent(id){
   if(btnParent) btnParent.style.display = "none";
 }
 
-/* ✅ 4번: 의견 필수 입력 및 결재 확인 팝업 */
 function confirmDecide(dbId, who, val, title) {
     const comment = document.getElementById(who + "C").value.trim();
     if (!comment) return alert("의견을 반드시 입력해야 결재가 가능합니다.");
@@ -279,8 +276,8 @@ function render(){
   else if(route.page === "new"){
     app.innerHTML = `<div class="card">
       <label>제목</label><input id="t" placeholder="무엇을 사거나 하고 싶나요?">
-      <label>목적</label><textarea id="p" rows="2" class="purpose-box" placeholder="왜 필요한가요?"></textarea>
-      <label>계획</label><textarea id="pl" rows="3" class="plan-box" placeholder="계획을 자세하게 적어주세요"></textarea>
+      <label>목적</label><textarea id="p" class="purpose-box" placeholder="왜 필요한가요?"></textarea>
+      <label>계획</label><textarea id="pl" class="plan-box" placeholder="계획을 자세하게 적어주세요"></textarea>
       <label>비용(원)</label><input id="c" type="text" placeholder="금액 입력" oninput="this.value=formatComma(this.value)">
       <div class="btn-row">
         <button onclick="submit()">결재올리기</button>
@@ -292,7 +289,6 @@ function render(){
     const r = allData.find(x => x.id === route.id);
     if(!r) return navigate({page:'list'});
 
-    /* ✅ 1, 6번 반영: 기록 포맷팅 */
     const getLog = (name, res, comm, time) => {
         const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳');
         const statusText = transKo(res);
@@ -307,8 +303,8 @@ function render(){
       <div class="view-time-header">상신: ${r.time}</div>
       <div class="card">
         <label>제목</label><input readonly value="${esc(r.title)}">
-        <label>목적</label><textarea rows="2" class="purpose-box" readonly>${esc(r.purpose)}</textarea>
-        <label>계획</label><textarea rows="3" class="plan-box" readonly>${esc(r.plan)}</textarea>
+        <label>목적</label><textarea class="purpose-box" readonly>${esc(r.purpose)}</textarea>
+        <label>계획</label><textarea class="plan-box" readonly>${esc(r.plan)}</textarea>
         
         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
           <label style="margin-top:0;">비용(원)</label>
