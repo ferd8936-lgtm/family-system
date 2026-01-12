@@ -21,53 +21,85 @@ header{padding:20px 16px;text-align:center;background:#fff;border-bottom:1px sol
 header h1 {margin:0; font-size:24px; font-weight:700; cursor: pointer; display: inline-block;}
 header p {margin:8px 0 0; font-size:16.8px; color:#666; line-height: 1.4;}
 
-/* 신청 화면 디자인 */
-.landing-header { padding: 40px 20px; text-align: center; background: #fff; }
-.landing-header h2 { font-size: 18px; color: var(--brand); margin-bottom: 10px; }
-.landing-header h1 { font-size: 28px; font-weight: 800; color: #111; }
-.form-card { max-width: 400px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-.form-group small { color: #888; font-size: 12px; }
-
 main{max-width:1100px;margin:auto;padding:16px;}
 body.full-view main { max-width: 100%; padding: 0; }
 body.full-view header { border-bottom: none; }
+
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
 
 button, .sms-btn{display:block; width:100%; padding:9px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; text-align:center; text-decoration:none; font-size:16px; font-family: inherit;}
 button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
+
 button.fit {width: auto; min-width: 80px; display: inline-block; margin: 0 8px 0 0; padding: 9px 20px;}
 .btn-parent-input { width: auto !important; padding: 10px 30px !important; }
 
-input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;font-size: 16px; color: #333; background: transparent;}
+button.small{padding: 4px 10px; font-size: 13px; margin: 0;}
+input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #333;font-family: inherit; background: transparent;}
 input:disabled, textarea:disabled { background: transparent; color: #333; border-color: #eee; }
+input::placeholder, textarea::placeholder { color: #aaa; }
+label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
+
+textarea.purpose-box, textarea.plan-box { height: 100px !important; min-height: 100px !important; overflow-y: auto !important; resize: none; }
+
+.top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start; align-items: center;}
+.btn-submit, .btn-stats, .btn-cal {width: auto !important; margin: 0 !important; padding: 8px 18px !important;}
+.btn-cal { margin-left: auto !important; background: #4b5563; }
+
+.top-search {display: flex; gap: 8px; align-items: center; margin-bottom: 16px;}
+.top-search input {margin-top: 0; height: 38px; flex: 1;}
+.top-search button {height: 38px; margin: 0; min-width: 60px; width: 60px; padding: 0; white-space: nowrap;}
 
 .table-wrapper {max-height: 540px;overflow-y: auto;border: 1px solid var(--line);border-radius: 8px;}
-table{width:100%; border-collapse:collapse; table-layout: fixed;}
+table{width:100%; border-collapse:collapse; position: relative; table-layout: fixed;}
+thead th {position: sticky;top: 0;background: #fdfdfd;z-index: 10;border-bottom: 2px solid var(--line);}
 th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;}
+tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
+td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700; white-space: nowrap;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
+.new-badge {background:#dc2626; color:#fff; font-size:10px; padding:2px 4px; border-radius:4px; margin-right:4px; vertical-align: middle; font-weight: bold;}
 
-/* 관리자 문구 숨김 처리 */
-.admin-trigger { color: #f1f1f1; font-size: 10px; text-align: center; margin-top: 50px; cursor: default; user-select: none; }
-
-.cal-wrapper { background: #fff; min-height: calc(100vh - 50px); font-family: 'NexonLv2Gothic', sans-serif; transition: opacity 0.3s ease-in-out; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; width: 100%; }
-.cal-day { background: #fff; min-height: 120px; padding: 4px; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
-.cal-event-item { color: #000; background-color: #eef2ff; padding: 2px 4px; border-radius: 4px; font-size: 11px; }
+.parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
 .modal .card{width:min(480px,100%); max-height: 85vh; overflow-y: auto;}
 .btn-row {display: flex; gap: 10px; margin-top: 20px; justify-content: center;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
+.view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
+
+.cal-wrapper { background: #fff; min-height: calc(100vh - 50px); font-family: 'NexonLv2Gothic', sans-serif; transition: opacity 0.3s ease-in-out; }
+.fade-out { opacity: 0; }
+.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fff; border-bottom: 1px solid var(--line); }
+.cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; width: 100%; border-bottom: 1px solid var(--line); }
+.cal-day-label { background: #fdfdfd; padding: 10px 0; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 1px solid var(--line); }
+.cal-day { background: #fff; min-height: 120px; padding: 4px; font-size: 12px; cursor: pointer; position: relative; display: flex; flex-direction: column; gap: 4px; }
+.cal-day.sun { color: red; }
+.cal-day.sat { color: blue; }
+.cal-day.other { color: #ccc; background: #fafafa; }
+.cal-day.today { background: #fff; } 
+.today-text { font-size: 9px; color: var(--brand); font-weight: bold; margin-left: 4px; vertical-align: middle; }
+
+.cal-event-container { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.cal-event-item { 
+    color: #000; 
+    background-color: #eef2ff; 
+    padding: 2px 4px; 
+    border-radius: 4px; 
+    font-size: 11px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;
+}
+.cal-footer { padding: 15px; background: var(--bg); }
+.stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
 <body>
-
-<div id="app">로딩 중...</div>
-
+<header id="main-header">
+    <h1 onclick="goHome()">똑똑!! 가족 게시판</h1>
+    <p>엄마와 아빠는 언제나 너의 멋진 계획을 응원해!</p>
+</header>
+<main id="app">데이터 로딩 중...</main>
 <div id="pwModal" class="modal"></div>
 <div id="statModal" class="modal"></div>
 
@@ -83,306 +115,283 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
-// URL에서 공간 ID 추출
-const urlParams = new URLSearchParams(window.location.search);
-const SPACE_ID = urlParams.get('id');
-const ADMIN_PW = "jkd89367102!";
+const PASSWORD = "7102";
 
 let route = { page: "list", id: null, date: null };
+let keyword = "";
 let allData = [];
 let calendarData = {};
 let currentCalDate = new Date();
 let tempParentInput = { momC: "", dadC: "" };
-let spaceConfig = null; // 현재 공간의 설정값
 
-// 초기 로직 제어
-async function init() {
-    if (!SPACE_ID) {
-        renderLanding(); // 공간 ID가 없으면 신청 화면
-    } else {
-        // 공간 정보 가져오기
-        const snap = await db.ref(`spaces/${SPACE_ID}`).get();
-        if (!snap.exists()) {
-            alert("존재하지 않거나 아직 승인되지 않은 공간입니다.");
-            location.href = location.pathname;
-            return;
-        }
-        spaceConfig = snap.val();
-        
-        // 자동 로그인 체크
-        const savedPw = localStorage.getItem(`auth_${SPACE_ID}`);
-        if (savedPw === spaceConfig.spacePw) {
-            startBoard();
-        } else {
-            openSpaceAuth();
-        }
-    }
-}
+db.ref("approvals").on("value", (snapshot) => {
+  const val = snapshot.val();
+  allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
+  if(route.page === "list") render();
+});
 
-// 1. 신청 화면 렌더링
-function renderLanding() {
-    document.getElementById('app').innerHTML = `
-        <div class="landing-header">
-            <h2>아이의 생각하는 힘을 키우는 우리 가족만의 이야기 공간</h2>
-            <h1>똑똑!! 가족 게시판</h1>
-        </div>
-        <div class="form-card">
-            <div class="form-group">
-                <label>공간 아이디</label>
-                <input id="reg_id" placeholder="공간 url 생성 아이디 (영문/숫자)">
-            </div>
-            <div class="form-group">
-                <label>공간 비밀번호</label>
-                <input id="reg_spacePw" type="password" placeholder="최초 사이트 접속 비밀번호">
-            </div>
-            <div class="form-group">
-                <label>부모 비밀번호</label>
-                <input id="reg_parentPw" type="password" placeholder="찬성/반대, 글 삭제 비밀번호">
-            </div>
-            <div class="form-group">
-                <label>등록 정보 수신 휴대폰</label>
-                <input id="reg_phone" placeholder="휴대폰 번호를 입력해주세요">
-            </div>
-            <button onclick="requestSpace()">공간 만들기</button>
-        </div>
-        <div class="admin-trigger" onclick="adminLogin()">시스템 관리자</div>
-    `;
-}
+db.ref("calendar_v2").on("value", (snapshot) => {
+  calendarData = snapshot.val() || {};
+  if(route.page === 'calendar' || route.page === 'calDetail') render();
+});
 
-// 공간 신청 함수
-function requestSpace() {
-    const id = document.getElementById('reg_id').value.trim();
-    const spacePw = document.getElementById('reg_spacePw').value.trim();
-    const parentPw = document.getElementById('reg_parentPw').value.trim();
-    const phone = document.getElementById('reg_phone').value.trim();
-
-    if(!id || !spacePw || !parentPw || !phone) return alert("모든 항목을 입력해주세요.");
-
-    db.ref(`requests/${id}`).set({
-        id, spacePw, parentPw, phone, status: "신청", time: new Date().toLocaleString()
-    }).then(() => {
-        alert("공간 생성이 신청되었습니다. 관리자 승인 후 사용 가능합니다.");
-        location.reload();
-    });
-}
-
-// 2. 관리자 시스템
-function adminLogin() {
-    const pw = prompt("관리자 비밀번호를 입력하세요.");
-    if (pw === ADMIN_PW) {
-        renderAdmin();
-    } else if(pw !== null) {
-        alert("비밀번호가 틀렸습니다.");
-    }
-}
-
-function renderAdmin() {
-    db.ref('requests').on('value', (snap) => {
-        const data = snap.val() || {};
-        const list = Object.values(data);
-        document.getElementById('app').innerHTML = `
-            <header><h1>시스템 관리자 전용</h1></header>
-            <main>
-                <div class="card">
-                    <b>가족 공간 신청 현황</b>
-                    <div class="table-wrapper" style="margin-top:10px;">
-                        <table>
-                            <thead><tr><th>ID</th><th>신청일</th><th>상태</th></tr></thead>
-                            <tbody>
-                                ${list.map(req => `
-                                    <tr onclick="viewRequest('${req.id}')" style="cursor:pointer">
-                                        <td>${req.id}</td>
-                                        <td>${req.time.split(' ')[0]}</td>
-                                        <td><span class="badge ${req.status === '운영' ? 'ok' : 'wait'}">${req.status}</span></td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <button class="gray" onclick="location.reload()">로그아웃</button>
-            </main>
-        `;
-    });
-}
-
-function viewRequest(id) {
-    db.ref(`requests/${id}`).once('value', (snap) => {
-        const r = snap.val();
-        const m = document.getElementById("pwModal");
-        m.style.display = "flex";
-        const myUrl = `${window.location.origin}${window.location.pathname}?id=${r.id}`;
-        m.innerHTML = `
-            <div class="card">
-                <b>신청 상세 정보</b><br><br>
-                아이디: ${r.id}<br>공간PW: ${r.spacePw}<br>부모PW: ${r.parentPw}<br>연락처: ${r.phone}<br>
-                <div class="btn-row">
-                    <button onclick="approveSpace('${r.id}')">관리자 승인</button>
-                    <button class="gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button>
-                </div>
-            </div>`;
-    });
-}
-
-function approveSpace(id) {
-    db.ref(`requests/${id}`).once('value', (snap) => {
-        const r = snap.val();
-        const myUrl = `${window.location.origin}${window.location.pathname}?id=${r.id}`;
-        const msg = `[똑똑! 가족게시판] 공간 승인 완료\n\nURL: ${myUrl}\n공간PW: ${r.spacePw}\n부모PW: ${r.parentPw}`;
-        
-        db.ref(`spaces/${id}`).set({...r, status: "운영"}).then(() => {
-            db.ref(`requests/${id}/status`).set("운영");
-            alert("승인되었습니다. 문자 전송 창으로 연결합니다.");
-            window.location.href = getSmsUrlAdmin(r.phone, msg);
-        });
-    });
-}
-
-function getSmsUrlAdmin(phone, text) {
-    const ua = navigator.userAgent.toLowerCase();
-    return /iphone|ipad|ipod/.test(ua) ? `sms:${phone}&body=${encodeURIComponent(text)}` : `sms:${phone}?body=${encodeURIComponent(text)}`;
-}
-
-// 3. 게시판 로직 시작 (비밀번호 인증)
-function openSpaceAuth() {
-    document.getElementById('app').innerHTML = `
-        <div class="form-card" style="margin-top:100px; text-align:center;">
-            <h2>우리 가족 공간 접속</h2>
-            <p style="font-size:14px; color:#666;">공간 비밀번호를 입력해주세요.</p>
-            <input id="space_auth_pw" type="password" style="text-align:center; margin:20px 0;">
-            <button onclick="checkSpaceAuth()">접속하기</button>
-        </div>
-    `;
-}
-
-function checkSpaceAuth() {
-    const input = document.getElementById('space_auth_pw').value;
-    if (input === spaceConfig.spacePw) {
-        localStorage.setItem(`auth_${SPACE_ID}`, input);
-        startBoard();
-    } else {
-        alert("비밀번호가 올바르지 않습니다.");
-    }
-}
-
-// 기존 게시판 기능 시작
-function startBoard() {
-    db.ref(`data/${SPACE_ID}/approvals`).on("value", (snapshot) => {
-      const val = snapshot.val();
-      allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
-      if(route.page === "list") render();
-    });
-
-    db.ref(`data/${SPACE_ID}/calendar`).on("value", (snapshot) => {
-      calendarData = snapshot.val() || {};
-      if(route.page === 'calendar' || route.page === 'calDetail') render();
-    });
-    render();
-}
-
-/* --- 게시판 렌더링 및 기능 (기존 코드 유지) --- */
-function render() {
-    const app = document.getElementById("app");
-    if(route.page === "list") {
-        app.innerHTML = `
-            <header><h1 onclick="goHome()">똑똑!! 가족 게시판</h1><p>엄마와 아빠는 언제나 너의 멋진 계획을 응원해!</p></header>
-            <main>
-                <div class="top-actions">
-                    <button class="btn-submit" onclick="navigate({page:'new'})">의견 올리기</button>
-                    <button class="btn-stats" onclick="openStats()">통계</button>
-                    <button class="btn-cal" onclick="navigate({page:'calendar'})">캘린더</button>
-                </div>
-                <div class="table-wrapper">
-                    <table>
-                        <colgroup><col style="width: 45px;"><col><col style="width: 75px;"></colgroup>
-                        <thead><tr><th>No</th><th>제목 / 상신시간</th><th>상태</th></tr></thead>
-                        <tbody>
-                            ${allData.map((r,i)=>`<tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
-                                <td>${allData.length - i}</td>
-                                <td style="text-align:left"><div>${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
-                                <td>${badge(getStatus(r))}</td>
-                            </tr>`).join("")}
-                        </tbody>
-                    </table>
-                </div>
-            </main>
-        `;
-    } 
-    else if(route.page === "new"){
-        app.innerHTML = `
-            <header><h1 onclick="goHome()">똑똑!! 가족 게시판</h1></header>
-            <main><div class="card">
-                <label>제목</label><input id="t">
-                <label>의견</label><textarea id="p" class="purpose-box"></textarea>
-                <label>계획</label><textarea id="pl" class="plan-box"></textarea>
-                <label>비용(원)</label><input id="c" oninput="this.value=formatComma(this.value)">
-                <div class="btn-row"><button onclick="confirmSubmit()">의견 올리기</button><button class="gray" onclick="navigate({page:'list'})">취소</button></div>
-            </div></main>`;
-    }
-    else if(route.page === "view"){
-        const r = allData.find(x => String(x.id) === String(route.id));
-        app.innerHTML = `
-            <header><h1 onclick="goHome()">똑똑!! 가족 게시판</h1></header>
-            <main>
-                <div class="card">
-                    <label>제목 <button class="small gray" onclick="toggleEdit('${r.dbId}')">수정</button></label>
-                    <input id="view-title" disabled value="${esc(r.title)}">
-                    <label>의견</label><textarea id="view-purpose" class="purpose-box" disabled>${esc(r.purpose)}</textarea>
-                    <label>계획</label><textarea id="view-plan" class="plan-box" readonly>${esc(r.plan)}</textarea>
-                    <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
-                </div>
-                <div id="parentArea"></div>
-                ${getStatus(r) === '대기' ? `<div style="text-align:center;"><button class="btn-parent-input" onclick="openParent('${r.id}')">부모 의견 입력</button></div>` : ''}
-                <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>
-            </main>`;
-    }
-    else if(route.page === "calendar"){ renderCalendarView(app); }
-    else if(route.page === "calDetail"){ renderCalendarDetail(app); }
-}
-
-/* --- 공통 유틸리티 함수 --- */
 function goHome() { navigate({page:'list'}); }
-function navigate(p, push=true){ route = p; if(push) history.pushState(p, ""); render(); }
-function getStatus(r){ const mom = r.mom || "pending", dad = r.dad || "pending"; if(mom === "pending" || dad === "pending") return "대기"; return (mom === "approve" && dad === "approve") ? "찬성" : "반대"; }
-function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
-function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+
+function navigate(p, push=true){ 
+  route = p; 
+  if(push) {
+      if(p.page === 'list') {
+          window.history.pushState(null, "", window.location.pathname);
+          window.history.replaceState(p, "");
+      } else {
+          history.pushState(p, "");
+      }
+  }
+  if(p.page === 'view' && p.id) {
+      let readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
+      if(!readList.includes(p.id)) {
+          readList.push(p.id);
+          localStorage.setItem('readApprovals', JSON.stringify(readList));
+      }
+  }
+  render(); 
+}
+
+function render(){
+  const app = document.getElementById("app");
+  const header = document.getElementById("main-header");
+  document.body.classList.remove("full-view");
+  header.style.display = (route.page === "calendar") ? "none" : "block";
+
+  if(route.page === "list"){
+    let displayData = [...allData];
+    if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
+    displayData.sort((a,b) => b.time.localeCompare(a.time));
+    const readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
+
+    app.innerHTML = `
+      <div class="top-actions">
+        <button class="btn-submit" onclick="navigate({page:'new'})">의견 올리기</button>
+        <button class="btn-stats" onclick="openStats()">통계</button>
+        <button class="btn-cal" onclick="navigate({page:'calendar'})">캘린더</button>
+      </div>
+      <div class="top-search">
+        <button class="gray" onclick="doSearch()">검색</button>
+        <input id="q" placeholder="검색어 입력" value="${esc(keyword)}">
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <colgroup><col style="width: 45px;"><col><col style="width: 75px;"></colgroup>
+          <thead><tr><th>No</th><th>제목 / 상신시간</th><th>상태</th></tr></thead>
+          <tbody>
+            ${displayData.map((r,i)=>{
+              const status = getStatus(r);
+              const isNew = !readList.includes(r.id) && status === '대기';
+              return `<tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
+                  <td>${displayData.length - i}</td>
+                  <td class="title"><div>${isNew ? '<span class="new-badge">NEW</span>' : ''}${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
+                  <td>${badge(status)}</td>
+                </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } 
+  else if(route.page === "new"){
+    app.innerHTML = `<div class="card">
+      <label>제목</label><input id="t" placeholder="무엇을 사거나 하고 싶나요?">
+      <label>의견</label><textarea id="p" class="purpose-box" placeholder="왜 필요한가요?"></textarea>
+      <label>계획</label><textarea id="pl" class="plan-box" placeholder="계획을 자세하게 적어주세요"></textarea>
+      <label>비용(원)</label><input id="c" type="text" placeholder="금액 입력" oninput="this.value=formatComma(this.value)">
+      <div class="btn-row"><button onclick="confirmSubmit()">의견 올리기</button><button class="gray" onclick="navigate({page:'list'})">취소</button></div>
+    </div>`;
+  }
+  else if(route.page === "view"){
+    const r = allData.find(x => String(x.id) === String(route.id));
+    if(!r) return navigate({page:'list'});
+    app.innerHTML = `
+      <div class="view-time-header">상신: ${r.time}</div>
+      <div class="card">
+        <label style="margin-top:0;">제목<button id="btnEditMain" class="small gray" style="width: auto; margin-left: auto;" onclick="toggleEdit('${r.dbId}')">수정</button></label>
+        <input id="view-title" disabled value="${esc(r.title)}">
+        <label>의견</label><textarea id="view-purpose" class="purpose-box" disabled>${esc(r.purpose)}</textarea>
+        <label>계획</label><textarea id="view-plan" class="plan-box" readonly>${esc(r.plan)}</textarea>
+        <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
+      </div>
+      <div class="parent-result"><div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
+        ${renderLog('엄마', r.mom, r.momC, r.momTime)}${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
+      </div>
+      <div id="parentArea"></div>
+      <div id="btnParentAuth" style="text-align:center; display: ${getStatus(r) === '대기' ? 'block' : 'none'};">
+        <button class="btn-parent-input" onclick="openParent('${r.id}')">부모 의견 입력</button>
+      </div>
+      <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
+  }
+  else if(route.page === "calendar"){ document.body.classList.add("full-view"); renderCalendarView(app); }
+  else if(route.page === "calDetail"){ renderCalendarDetail(app); }
+}
+
+function getSmsUrl(text) {
+    const ua = navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(ua) ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
+}
 
 function confirmSubmit() {
   const t = document.getElementById("t").value.trim();
-  const rawC = document.getElementById("c").value.replace(/,/g, '');
-  db.ref(`data/${SPACE_ID}/approvals`).push({ id: Date.now().toString(), title:t, purpose:document.getElementById("p").value, plan:document.getElementById("pl").value, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" }).then(() => navigate({page:'list'}));
+  const p = document.getElementById("p").value.trim();
+  const pl = document.getElementById("pl").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
+  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
+  const m = document.getElementById("pwModal"); m.style.display = "flex";
+  m.innerHTML = `<div class="card" style="text-align:center;"><b>의견 상신 확인</b><p style="margin-top:10px;">이대로 의견을 올릴까요?</p><div class="btn-row"><button class="fit" onclick="submit()">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
 }
 
-function openParent(id){
-    const pw = prompt("부모 비밀번호를 입력하세요.");
-    if(pw === spaceConfig.parentPw) {
-        const r = allData.find(x=>String(x.id)===String(id));
-        let h = `<div class="card"><b>부모 의견 입력</b><textarea id="p_comm" rows="3" placeholder="의견을 입력하세요"></textarea>
-                 <div class="btn-row"><button class="green" onclick="decide('${r.dbId}','approve')">찬성</button><button class="red" onclick="decide('${r.dbId}','reject')">반대</button></div></div>`;
-        document.getElementById("parentArea").innerHTML = h;
-    } else if(pw !== null) alert("비밀번호가 틀렸습니다.");
+function submit(){
+  const t = document.getElementById("t").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
+  const p = document.getElementById("p").value.trim();
+  const pl = document.getElementById("pl").value.trim();
+  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
+  
+  db.ref("approvals").push(newPost).then(() => {
+    // 1. 의견 올리기 문자 양식 수정
+    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;">
+        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
+        <p style="color:#666; margin-bottom:20px;">가족들에게 문자를 보낼까요?</p>
+        <div class="btn-row">
+          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a>
+          <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button>
+        </div>
+      </div>`;
+  });
 }
 
-function decide(dbId, val){
-    const comm = document.getElementById("p_comm").value;
-    const who = prompt("누구신가요? (엄마/아빠)");
-    const field = who === '엄마' ? 'mom' : 'dad';
-    db.ref(`data/${SPACE_ID}/approvals/${dbId}`).update({ [field]: val, [field+"C"]: comm, [field+"Time"]: now() }).then(() => render());
+function renderCalendarView(container) {
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    let html = `<div class="cal-wrapper" id="calTouchArea">
+        <div class="cal-header"><button class="gray small" onclick="changeMonth(-1)">◀</button><b style="font-size:20px;">${year}년 ${month + 1}월</b><button class="gray small" onclick="changeMonth(1)">▶</button></div>
+        <div class="cal-grid"><div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div><div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>`;
+    for(let i=0; i<firstDay; i++) html += `<div class="cal-day other"></div>`;
+    for(let d=1; d<=lastDate; d++) {
+        const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
+        let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
+        events.sort((a, b) => a.time.localeCompare(b.time));
+        const dayOfWeek = new Date(year, month, d).getDay();
+        let cls = isToday ? 'today' : '';
+        if(dayOfWeek === 0) cls += ' sun'; if(dayOfWeek === 6) cls += ' sat';
+        html += `<div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})"><b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b><div class="cal-event-container">${events.map(ev => `<div class="cal-event-item">${esc(ev.content)}</div>`).join('')}</div></div>`;
+    }
+    html += `</div><div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div></div>`;
+    container.innerHTML = html;
+    const touchArea = document.getElementById('calTouchArea');
+    let touchStartX = 0;
+    touchArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, false);
+    touchArea.addEventListener('touchend', e => {
+        let diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) { touchArea.classList.add('fade-out'); setTimeout(() => { changeMonth(diff > 0 ? 1 : -1); touchArea.classList.remove('fade-out'); }, 150); }
+    }, false);
 }
 
+function renderCalendarDetail(container) {
+    const dateKey = route.date;
+    let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
+    events.sort((a, b) => a[1].time.localeCompare(b[1].time));
+    container.innerHTML = `<div class="card"><h2 style="margin-top:0; font-size: 1.2rem;">${dateKey} 일정 추가</h2><label>시간</label><input id="calTime" type="time" value="12:00"><label>내용</label><textarea id="calContent" rows="3" placeholder="일정을 입력하세요"></textarea><button onclick="saveCal('${dateKey}')">일정 추가하기</button><hr style="margin:20px 0; border:0; border-top:1px solid var(--line);"><b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>${events.map(([id, ev]) => `<div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;"><div><small>${ev.time}</small><br><b>${esc(ev.content)}</b></div><button class="small red" style="width:auto;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button></div>`).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}<button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button></div>`;
+}
+
+function askDeleteCal(dateKey, id) {
+    const m = document.getElementById("pwModal"); m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row">
+            <button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button>
+            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
+        </div></div>`;
+}
+function doDeleteCal(dateKey, id) { db.ref(`calendar_v2/${dateKey}/${id}`).remove().then(() => { document.getElementById("pwModal").style.display = "none"; render(); }); }
+function saveCal(dateKey) {
+    const time = document.getElementById("calTime").value; const content = document.getElementById("calContent").value.trim();
+    if(!content) return alert("내용을 입력해주세요.");
+    db.ref("calendar_v2/" + dateKey).push({ time, content }).then(() => { render(); });
+}
+function changeMonth(diff) { currentCalDate.setMonth(currentCalDate.getMonth() + diff); render(); }
+function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function getStatus(r){ const mom = r.mom || "pending", dad = r.dad || "pending"; if(mom === "pending" || dad === "pending") return "대기"; return (mom === "approve" && dad === "approve") ? "찬성" : "반대"; }
+function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
+function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
+function renderLog(name, res, comm, time) { const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳'); return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`; }
+function toggleEdit(dbId) {
+    const btn = document.getElementById("btnEditMain");
+    if(btn.innerText !== "저장") { document.getElementById("view-title").disabled = false; document.getElementById("view-purpose").disabled = false; document.getElementById("view-cost").disabled = false; btn.innerText = "저장"; btn.classList.add("green"); } 
+    else { const updates = { title: document.getElementById("view-title").value.trim(), purpose: document.getElementById("view-purpose").value.trim(), cost: document.getElementById("view-cost").value.replace(/,/g, '') }; db.ref("approvals/"+dbId).update(updates).then(() => { alert("수정되었습니다."); render(); }); }
+}
 function askDelete(dbId){
-    if(prompt("부모 비밀번호를 입력하세요.") === spaceConfig.parentPw) {
-        db.ref(`data/${SPACE_ID}/approvals/${dbId}`).remove().then(() => navigate({page:'list'}));
-    } else alert("비밀번호 불일치");
+  const m = document.getElementById("pwModal"); m.style.display="flex";
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+}
+function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; }); } else { alert("비밀번호가 틀렸습니다."); } }
+function openParent(id){ const m = document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`; }
+function authParent(id){
+  if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
+  document.getElementById("pwModal").style.display="none";
+  const r = allData.find(x=>String(x.id)===String(id)); let h = "";
+  if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
+  if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
+  document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
 }
 
-// 캘린더 등 기타 기능은 SPACE_ID 경로를 사용하도록 유지...
-// (이하 생략 - 전체 기능이 SPACE_ID 기반으로 동작하도록 위 startBoard에서 경로가 설정됨)
+function confirmDecide(dbId, who, val, title, cost) {
+    const comment = document.getElementById(who + "C").value.trim();
+    if (!comment) return alert("의견을 반드시 입력해야 합니다.");
+    
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;">
+        <b>의견 등록 확인</b>
+        <p style="margin-top:10px;">의견을 등록하시겠습니까?</p>
+        <div class="btn-row">
+            <button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}', '${cost}')">확인</button>
+            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
+        </div>
+    </div>`;
+}
 
-init(); // 실행 시작
+function decide(dbId, who, val, title, cost){
+    const comment = document.getElementById(who+"C").value;
+    if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
+    
+    db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
+        // 2. 부모 결정 시 문자 내용 수정
+        const whoKo = (who === 'mom' ? '엄마' : '아빠');
+        const msg = `[똑똑! 가족게시판]\n${whoKo}의 의견이 등록되었습니다`;
+        const m = document.getElementById("pwModal");
+        m.style.display = "flex";
+        m.innerHTML = `<div class="card" style="text-align:center;">
+            <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b>
+            <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
+            <div class="btn-row">
+              <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a>
+              <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button>
+            </div>
+          </div>`;
+    });
+}
+
+function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
+function openStats(){
+  const stats = {}; allData.filter(x => getStatus(x) !== "대기").forEach(item => { const key = item.time.substring(0,7).replace("-","년 ") + "월"; if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0}; const s = getStatus(item), c = Number(item.cost); if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; } });
+  const sorted = Object.keys(stats).sort().reverse(), m = document.getElementById("statModal"); m.style.display="flex";
+  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
+}
+window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } else { window.history.back(); } };
+history.replaceState({page:'list'}, "");
 </script>
 </body>
 </html>
