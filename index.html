@@ -147,7 +147,6 @@ function navigate(p, push=true){
           history.pushState(p, "");
       }
   }
-  // 상세페이지 조회 시 읽음 목록 업데이트 (NEW 표시 제어용)
   if(p.page === 'view' && p.id) {
       let readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
       if(!readList.includes(p.id)) {
@@ -249,13 +248,14 @@ function confirmSubmit() {
 
 function submit(){
   const t = document.getElementById("t").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
   const p = document.getElementById("p").value.trim();
   const pl = document.getElementById("pl").value.trim();
-  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[의견요청] 대호의 상신: ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 찬성/반대 부탁드려요!`;
+    // 1. 요청하신 양식으로 문자 내용 수정
+    const msg = `[의견 검토 요청]\n\n제목 : ${t}\n\n금액 : ${Number(rawC).toLocaleString()}원`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
@@ -339,18 +339,48 @@ function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
   const r = allData.find(x=>String(x.id)===String(id)); let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}')">반대</button></div></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}')">반대</button></div></div>`;
+  if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
+  if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
   document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
 }
-function confirmDecide(dbId, who, val, title) {
-    const comment = document.getElementById(who + "C").value.trim(); if (!comment) return alert("의견을 반드시 입력해야 합니다.");
-    const resultStr = val === 'approve' ? '✅찬성' : '❌반대', msg = `[의견결과] 대호의 상신: ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
+
+// 2. 부모 의견 등록 전 확인 팝업 추가 로직
+function confirmDecide(dbId, who, val, title, cost) {
+    const comment = document.getElementById(who + "C").value.trim();
+    if (!comment) return alert("의견을 반드시 입력해야 합니다.");
+    
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;">
+        <b>의견 등록 확인</b>
+        <p style="margin-top:10px;">의견을 등록하시겠습니까?</p>
+        <div class="btn-row">
+            <button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}', '${cost}')">확인</button>
+            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
+        </div>
+    </div>`;
+}
+
+function decide(dbId, who, val, title, cost){
+    const comment = document.getElementById(who+"C").value;
+    if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
+    
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-        const m = document.getElementById("pwModal"); m.style.display = "flex";
-        m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b><p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
+        // 1. 요청 양식에 따른 문자 내용 생성
+        const msg = `[의견 검토 요청]\n\n제목 : ${title}\n\n금액 : ${Number(cost).toLocaleString()}원`;
+        const m = document.getElementById("pwModal");
+        m.style.display = "flex";
+        m.innerHTML = `<div class="card" style="text-align:center;">
+            <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b>
+            <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
+            <div class="btn-row">
+              <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a>
+              <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button>
+            </div>
+          </div>`;
     });
 }
+
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function openStats(){
   const stats = {}; allData.filter(x => getStatus(x) !== "대기").forEach(item => { const key = item.time.substring(0,7).replace("-","년 ") + "월"; if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0}; const s = getStatus(item), c = Number(item.cost); if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; } });
