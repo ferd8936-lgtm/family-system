@@ -254,8 +254,8 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    // 1. 요청하신 양식으로 문자 내용 수정
-    const msg = `[의견 검토 요청]\n\n제목 : ${t}\n\n금액 : ${Number(rawC).toLocaleString()}원`;
+    // 1. 의견 올리기 문자 양식 수정
+    const msg = `[똑똑! 가족게시판]\n의견이 접수되었습니다\n\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
@@ -308,7 +308,10 @@ function renderCalendarDetail(container) {
 
 function askDeleteCal(dateKey, id) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
-    m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row">
+            <button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button>
+            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
+        </div></div>`;
 }
 function doDeleteCal(dateKey, id) { db.ref(`calendar_v2/${dateKey}/${id}`).remove().then(() => { document.getElementById("pwModal").style.display = "none"; render(); }); }
 function saveCal(dateKey) {
@@ -344,7 +347,6 @@ function authParent(id){
   document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
 }
 
-// 2. 부모 의견 등록 전 확인 팝업 추가 로직
 function confirmDecide(dbId, who, val, title, cost) {
     const comment = document.getElementById(who + "C").value.trim();
     if (!comment) return alert("의견을 반드시 입력해야 합니다.");
@@ -366,8 +368,9 @@ function decide(dbId, who, val, title, cost){
     if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
     
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-        // 1. 요청 양식에 따른 문자 내용 생성
-        const msg = `[의견 검토 요청]\n\n제목 : ${title}\n\n금액 : ${Number(cost).toLocaleString()}원`;
+        // 2. 부모 결정 시 문자 내용 수정
+        const whoKo = (who === 'mom' ? '엄마' : '아빠');
+        const msg = `[똑똑! 가족게시판]\n${whoKo}의 의견이 등록되었습니다`;
         const m = document.getElementById("pwModal");
         m.style.display = "flex";
         m.innerHTML = `<div class="card" style="text-align:center;">
