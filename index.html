@@ -140,7 +140,15 @@ function goHome() {
 
 function navigate(p, push=true){ 
   route = p; 
-  if(push) history.pushState(p, "");
+  if(push) {
+      if(p.page === 'list') {
+          // 메인으로 갈 때는 히스토리를 다 비우고 최상단으로 설정
+          window.history.pushState(null, "", window.location.pathname);
+          window.history.replaceState(p, "");
+      } else {
+          history.pushState(p, "");
+      }
+  }
   render(); 
 }
 
@@ -466,25 +474,17 @@ function openStats(){
   m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
 }
 
-// 2. 뒤로가기 로직 최종 수정: 메인화면이면 종료 확인, 아니면 뒤로가기 수행
+// 1. 뒤로가기 로직 수정: 메인화면이면 히스토리 백(종료), 아니면 이전 상태로
 window.onpopstate = (e) => { 
-  if(route.page === 'list') {
-    // 현재 페이지가 메인이면 앱 종료 확인
-    if (confirm("프로그램을 종료하시겠습니까?")) {
-        history.back(); 
-    } else {
-        history.pushState({page:'list'}, "");
-    }
+  if(e.state) {
+    route = e.state;
+    render();
   } else {
-    // 그 외 화면이면 이전 히스토리 상태로 복구
-    if(e.state) {
-      route = e.state;
-      render();
-    } else {
-      navigate({page:'list'});
-    }
+    // 히스토리가 없거나 메인에서 뒤로가기 시 브라우저 기본 동작(나가기) 수행
+    window.history.back();
   }
 };
+
 history.replaceState({page:'list'}, "");
 function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
 </script>
