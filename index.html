@@ -3,49 +3,49 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-<title>가족 결재시스템</title>
+<title>똑똑!! 가족 게시판</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
 <style>
+@font-face {
+    font-family: 'NexonLv2Gothic';
+    src: url('NexonLv2Gothic_2.ttf') format('truetype');
+}
 :root{--bg:#f8fafc;--card:#ffffff;--line:#e5e7eb;--brand:#6366f1;--ok:#16a34a;--bad:#dc2626;--wait:#d97706;}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif;background:var(--bg);}
-header{padding:16px;text-align:center;font-size:20px;font-weight:700;background:#fff;border-bottom:1px solid var(--line);}
+body, button, input, textarea {margin:0; font-family:'NexonLv2Gothic', sans-serif; background:var(--bg);}
+header{padding:20px 16px;text-align:center;background:#fff;border-bottom:1px solid var(--line);}
+header h1 {margin:0; font-size:24px; font-weight:700;}
+header p {margin:8px 0 0; font-size:16.8px; color:#666; line-height: 1.4;}
+
 main{max-width:1100px;margin:auto;padding:16px;}
+body.full-view main { max-width: 100%; padding: 0; }
+body.full-view header { border-bottom: none; }
+
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;}
 
-button, .sms-btn{display:block; width:100%; padding:9px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; text-align:center; text-decoration:none; font-size:16px;}
+button, .sms-btn{display:block; width:100%; padding:9px 16px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;margin:6px 0; text-align:center; text-decoration:none; font-size:16px; font-family: inherit;}
 button.gray, .sms-btn.gray{background:#e5e7eb;color:#111}
 button.green{background:var(--ok)}
 button.red{background:var(--bad)}
 
 button.fit {width: auto; min-width: 80px; display: inline-block; margin: 0 8px 0 0; padding: 9px 20px;}
+.btn-parent-input { width: auto !important; padding: 10px 30px !important; }
 
-button.small{padding: 4px 10px; font-size: 13px; margin: 0; margin-left: 8px;}
-input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #666;font-family: inherit;}
-input::placeholder, textarea::placeholder {color: #aaa;}
+button.small{padding: 4px 10px; font-size: 13px; margin: 0;}
+input, textarea {width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);margin-top:6px;line-height:1.4;letter-spacing: -0.5px !important;font-size: 16px; color: #333;font-family: inherit; background: transparent;}
+input:disabled, textarea:disabled { background: transparent; color: #333; border-color: #eee; }
+input::placeholder, textarea::placeholder { color: #aaa; }
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 
-/* ✅ 입력 칸 사이즈 강제 고정 (기존 대비 확실하게 체감되도록 수치 조정) */
-/* 목적: 기존 약 60px -> 100px (20% 이상 넉넉히 확대) */
-textarea.purpose-box { 
-    height: 100px !important; 
-    min-height: 100px !important; 
-    overflow-y: auto !important; 
-    resize: none; 
-}
-/* 계획: 기존 약 90px -> 160px (30% 이상 확실히 확대) */
-textarea.plan-box { 
-    height: 160px !important; 
-    min-height: 160px !important; 
-    overflow-y: auto !important; 
-    resize: none; 
-}
+/* 1. 계획 입력 칸 세로 사이즈를 의견 칸과 동일하게 수정 (160px -> 100px) */
+textarea.purpose-box, textarea.plan-box { height: 100px !important; min-height: 100px !important; overflow-y: auto !important; resize: none; }
 
-.top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start;}
-.btn-submit, .btn-stats {width: auto !important; margin: 0 !important; padding: 9px 20px !important;}
+.top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start; align-items: center;}
+.btn-submit, .btn-stats, .btn-cal {width: auto !important; margin: 0 !important; padding: 8px 18px !important;}
+.btn-cal { margin-left: auto !important; background: #4b5563; }
 
 .top-search {display: flex; gap: 8px; align-items: center; margin-bottom: 16px;}
 .top-search input {margin-top: 0; height: 38px; flex: 1;}
@@ -59,7 +59,6 @@ tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
 td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700; white-space: nowrap;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
-.new-badge {background:#dc2626; color:#fff; font-size:10px; padding:2px 4px; border-radius:4px; margin-right:4px; vertical-align: middle; font-weight: bold;}
 
 .parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
@@ -67,11 +66,39 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row {display: flex; gap: 10px; margin-top: 20px; justify-content: center;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
+
+.cal-wrapper { background: #fff; min-height: calc(100vh - 50px); font-family: 'NexonLv2Gothic', sans-serif;}
+.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fff; border-bottom: 1px solid var(--line); }
+.cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; width: 100%; border-bottom: 1px solid var(--line); }
+.cal-day-label { background: #fdfdfd; padding: 10px 0; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 1px solid var(--line); }
+/* 2. 오늘 배경색 제거하고 일반 날짜와 동일하게 수정 */
+.cal-day { background: #fff; min-height: 120px; padding: 4px; font-size: 12px; cursor: pointer; position: relative; display: flex; flex-direction: column; gap: 4px; }
+.cal-day.sun { color: red; }
+.cal-day.sat { color: blue; }
+.cal-day.other { color: #ccc; background: #fafafa; }
+/* .cal-day.today 배경색 제거 */
+.cal-day.today { background: #fff; } 
+.today-text { font-size: 9px; color: var(--brand); font-weight: bold; margin-left: 4px; vertical-align: middle; }
+
+.cal-event-container { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.cal-event-item { 
+    color: #000; 
+    background-color: #eef2ff; 
+    padding: 2px 4px; 
+    border-radius: 4px; 
+    font-size: 11px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;
+}
+.cal-footer { padding: 15px; background: var(--bg); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
 <body>
-<header>가족 결재시스템</header>
+<header id="main-header">
+    <h1>똑똑!! 가족 게시판</h1>
+    <p>엄마와 아빠는 언제나 너의 멋진 계획을 응원해!</p>
+</header>
 <main id="app">데이터 로딩 중...</main>
 <div id="pwModal" class="modal"></div>
 <div id="statModal" class="modal"></div>
@@ -90,9 +117,12 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-let route = { page: "list", id: null };
+let route = { page: "list", id: null, date: null };
 let keyword = "";
 let allData = [];
+let calendarData = {};
+let currentCalDate = new Date();
+let tempParentInput = { momC: "", dadC: "" };
 
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
@@ -100,191 +130,34 @@ db.ref("approvals").on("value", (snapshot) => {
   render();
 });
 
-function getSmsUrl(text) {
-    const ua = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua);
-    return isIOS 
-        ? `sms:&body=${encodeURIComponent(text)}` 
-        : `sms:?body=${encodeURIComponent(text)}`;
-}
-
-function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
-function formatComma(v){ return v.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-function getStatus(r){
-  const mom = r.mom || "pending"; const dad = r.dad || "pending";
-  if(mom === "pending" || dad === "pending") return "대기";
-  return (mom === "approve" && dad === "approve") ? "승인" : "반려";
-}
-function badge(s){ return `<span class="badge ${s==='승인'?'ok':(s==='반려'?'no':'wait')}">${s}</span>`; }
-function transKo(v){ return v === "approve" ? "승인" : (v === "reject" ? "반려" : "대기"); }
+db.ref("calendar_v2").on("value", (snapshot) => {
+  calendarData = snapshot.val() || {};
+  if(route.page === 'calendar' || route.page === 'calDetail') render();
+});
 
 function navigate(p, push=true){ 
   route = p; 
-  if(p.page === 'view' && p.id) {
-      let readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
-      if(!readList.includes(p.id)) {
-          readList.push(p.id);
-          localStorage.setItem('readApprovals', JSON.stringify(readList));
-      }
-  }
   if(push) history.pushState(route,""); 
   render(); 
 }
 
-function confirmSubmit() {
-  const t = document.getElementById("t").value.trim();
-  const p = document.getElementById("p").value.trim();
-  const pl = document.getElementById("pl").value.trim();
-  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
-  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
-
-  const m = document.getElementById("pwModal");
-  m.style.display = "flex";
-  m.innerHTML = `
-    <div class="card" style="text-align:center;">
-      <b>결재 상신 확인</b>
-      <p style="margin-top:10px;">이대로 결재를 올릴까요?</p>
-      <div class="btn-row">
-        <button class="fit" onclick="submit()">확인</button>
-        <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
-      </div>
-    </div>`;
-}
-
-function submit(){
-  const t = document.getElementById("t").value.trim();
-  const p = document.getElementById("p").value.trim();
-  const pl = document.getElementById("pl").value.trim();
-  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
-
-  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
-  
-  db.ref("approvals").push(newPost).then(() => {
-    const msg = `[결재요청] ${t}\n금액: ${Number(rawC).toLocaleString()}원\n엄마, 아빠 결재 부탁드려요!`;
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
-    m.innerHTML = `
-      <div class="card" style="text-align:center;">
-        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
-        <p style="color:#666; margin-bottom:20px;">가족들에게 문자를 보낼까요?</p>
-        <div class="btn-row">
-          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">문자 보내기</a>
-          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
-        </div>
-      </div>`;
-  });
-}
-
-function askDelete(dbId){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`
-    <div class="card" style="text-align:center;">
-      <b>결재 삭제</b>
-      <input id="delPw" type="password" placeholder="비밀번호">
-      <div class="btn-row">
-        <button class="fit" onclick="authDelete('${dbId}')">확인</button>
-        <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button>
-      </div>
-    </div>`;
-  setTimeout(()=>document.getElementById("delPw").focus(), 100);
-}
-
-function authDelete(dbId){
-  if(document.getElementById("delPw").value === PASSWORD){
-    db.ref("approvals/"+dbId).remove().then(() => {
-      alert("삭제되었습니다.");
-      document.getElementById("pwModal").style.display="none";
-      navigate({page:'list'});
-    });
-  } else { alert("비밀번호가 틀렸습니다."); }
-}
-
-function updateCost(dbId){
-  const newCostRaw = document.getElementById("editCost").value.replace(/,/g, '').trim();
-  if(!newCostRaw) return alert("수정할 금액을 입력하세요.");
-  db.ref("approvals/"+dbId).update({ cost: newCostRaw }).then(() => {
-    alert("비용이 수정되었습니다.");
-    render();
-  });
-}
-
-function openParent(id){
-  const m = document.getElementById("pwModal");
-  m.style.display="flex";
-  m.innerHTML=`
-    <div class="card" style="text-align:center;">
-      <b>부모 인증</b>
-      <input id="pw" type="password" placeholder="비밀번호">
-      <div class="btn-row">
-        <button class="fit" onclick="authParent('${id}')">확인</button>
-        <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button>
-      </div>
-    </div>`;
-  setTimeout(()=>document.getElementById("pw").focus(), 100);
-}
-
-function authParent(id){
-  if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
-  document.getElementById("pwModal").style.display="none";
-  const r = allData.find(x=>x.id===id);
-  let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 결재</b><textarea id="momC" rows="3" placeholder="의견을 입력해주세요 (필수)"></textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}')">승인</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}')">반려</button></div></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 결재</b><textarea id="dadC" rows="3" placeholder="의견을 입력해주세요 (필수)"></textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}')">승인</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}')">반려</button></div></div>`;
-  document.getElementById("parentArea").innerHTML = h || "<p>이미 결재를 완료하셨습니다.</p>";
-  const btnParent = document.getElementById("btnParentAuth");
-  if(btnParent) btnParent.style.display = "none";
-}
-
-function confirmDecide(dbId, who, val, title) {
-    const comment = document.getElementById(who + "C").value.trim();
-    if (!comment) return alert("의견을 반드시 입력해야 결재가 가능합니다.");
-    const actionText = val === 'approve' ? '승인' : '반려';
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
-    m.innerHTML = `
-      <div class="card" style="text-align:center;">
-        <b>결재 확인</b>
-        <p style="margin-top:10px;">${actionText} 처리 하시겠습니까?</p>
-        <div class="btn-row">
-          <button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}')">확인</button>
-          <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
-        </div>
-      </div>`;
-}
-
-function decide(dbId, who, val, title){
-  const comment = document.getElementById(who+"C").value;
-  db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-    const resultStr = val === 'approve' ? '✅승인' : '❌반려';
-    const msg = `[결재결과] ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
-    m.innerHTML = `
-      <div class="card" style="text-align:center;">
-        <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 결재 완료</b>
-        <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
-        <div class="btn-row">
-          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">문자 보내기</a>
-          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
-        </div>
-      </div>`;
-  });
-}
-
 function render(){
   const app = document.getElementById("app");
-  let displayData = [...allData];
-  if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
-  displayData.sort((a,b) => b.time.localeCompare(a.time));
+  const header = document.getElementById("main-header");
+  
+  document.body.classList.remove("full-view");
+  header.style.display = (route.page === "calendar") ? "none" : "block";
 
   if(route.page === "list"){
-    const readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
+    let displayData = [...allData];
+    if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
+    displayData.sort((a,b) => b.time.localeCompare(a.time));
+
     app.innerHTML = `
       <div class="top-actions">
-        <button class="btn-submit" onclick="navigate({page:'new'})">결재올리기</button>
+        <button class="btn-submit" onclick="navigate({page:'new'})">의견 올리기</button>
         <button class="btn-stats" onclick="openStats()">통계</button>
+        <button class="btn-cal" onclick="navigate({page:'calendar'})">캘린더</button>
       </div>
       <div class="top-search">
         <button class="gray" onclick="doSearch()">검색</button>
@@ -297,76 +170,241 @@ function render(){
           <tbody>
             ${displayData.map((r,i)=>{
               const status = getStatus(r);
-              const isNew = !readList.includes(r.id) && status === '대기';
-              return `
-                <tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
+              return `<tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
                   <td>${displayData.length - i}</td>
-                  <td class="title">
-                    <div>${isNew ? '<span class="new-badge">NEW</span>' : ''}${esc(r.title)}</div>
-                    <small style="color:#888;">${r.time}</small>
-                  </td>
+                  <td class="title"><div>${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
                   <td>${badge(status)}</td>
-                </tr>
-              `;
+                </tr>`;
             }).join("")}
           </tbody>
         </table>
       </div>`;
-    const q=document.getElementById("q"); if(q) q.addEventListener("keydown", e => e.key === "Enter" && doSearch());
   } 
   else if(route.page === "new"){
     app.innerHTML = `<div class="card">
       <label>제목</label><input id="t" placeholder="무엇을 사거나 하고 싶나요?">
-      <label>목적</label><textarea id="p" class="purpose-box" placeholder="왜 필요한가요?"></textarea>
+      <label>의견</label><textarea id="p" class="purpose-box" placeholder="왜 필요한가요?"></textarea>
       <label>계획</label><textarea id="pl" class="plan-box" placeholder="계획을 자세하게 적어주세요"></textarea>
       <label>비용(원)</label><input id="c" type="text" placeholder="금액 입력" oninput="this.value=formatComma(this.value)">
-      <div class="btn-row">
-        <button onclick="confirmSubmit()">결재올리기</button>
-        <button class="gray" onclick="navigate({page:'list'})">취소</button>
-      </div>
+      <div class="btn-row"><button onclick="confirmSubmit()">의견 올리기</button><button class="gray" onclick="navigate({page:'list'})">취소</button></div>
     </div>`;
   }
   else if(route.page === "view"){
-    const r = allData.find(x => x.id === route.id);
+    const r = allData.find(x => String(x.id) === String(route.id));
     if(!r) return navigate({page:'list'});
-
-    const getLog = (name, res, comm, time) => {
-        const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳');
-        const statusText = transKo(res);
-        const timeText = time ? `/ ${time}` : '';
-        return `<div style="margin-bottom:15px;">
-            <b>${name}: ${icon} ${statusText} ${timeText}</b><br>
-            <div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div>
-        </div>`;
-    };
-
     app.innerHTML = `
       <div class="view-time-header">상신: ${r.time}</div>
       <div class="card">
-        <label>제목</label><input readonly value="${esc(r.title)}">
-        <label>목적</label><textarea class="purpose-box" readonly>${esc(r.purpose)}</textarea>
-        <label>계획</label><textarea class="plan-box" readonly>${esc(r.plan)}</textarea>
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
-          <label style="margin-top:0;">비용(원)</label>
-          <button class="small gray" style="width:fit-content; margin:0 0 0 auto; padding: 4px 12px;" onclick="updateCost('${r.dbId}')">수정</button>
-        </div>
-        <input id="editCost" type="text" value="${formatComma(r.cost)}" oninput="this.value=formatComma(this.value)">
+        <label style="margin-top:0;">
+            제목
+            <button id="btnEditMain" class="small gray" style="width: auto; margin-left: auto;" onclick="toggleEdit('${r.dbId}')">수정</button>
+        </label>
+        <input id="view-title" disabled value="${esc(r.title)}">
+        <label>의견</label><textarea id="view-purpose" class="purpose-box" disabled>${esc(r.purpose)}</textarea>
+        <label>계획</label><textarea id="view-plan" class="plan-box" readonly>${esc(r.plan)}</textarea>
+        <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
       </div>
       <div class="parent-result">
-        <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 결재 기록</b></div>
-        ${getLog('엄마', r.mom, r.momC, r.momTime)}
-        ${getLog('아빠', r.dad, r.dadC, r.dadTime)}
+        <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
+        ${renderLog('엄마', r.mom, r.momC, r.momTime)}
+        ${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
       </div>
       <div id="parentArea"></div>
-      <div id="btnParentAuth" style="text-align:left; display: ${getStatus(r) === '대기' ? 'block' : 'none'};">
-        <button class="fit" onclick="openParent('${r.id}')">부모 결재</button>
+      <div id="btnParentAuth" style="text-align:center; display: ${getStatus(r) === '대기' ? 'block' : 'none'};">
+        <button class="btn-parent-input" onclick="openParent('${r.id}')">부모 의견 입력</button>
       </div>
-      <div class="btn-row">
-        <button class="gray" onclick="navigate({page:'list'})">목록</button>
-        <button class="red" onclick="askDelete('${r.dbId}')">삭제</button>
-      </div>`;
+      <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
+  }
+  else if(route.page === "calendar"){
+    document.body.classList.add("full-view");
+    renderCalendarView(app);
+  }
+  else if(route.page === "calDetail"){
+    renderCalendarDetail(app);
   }
 }
+
+function renderCalendarView(container) {
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    
+    let html = `<div class="cal-wrapper">
+        <div class="cal-header">
+            <button class="gray small" onclick="changeMonth(-1)">◀</button>
+            <b style="font-size:20px;">${year}년 ${month + 1}월</b>
+            <button class="gray small" onclick="changeMonth(1)">▶</button>
+        </div>
+        <div class="cal-grid">
+            <div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div>
+            <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
+    `;
+
+    for(let i=0; i<firstDay; i++) html += `<div class="cal-day other"></div>`;
+    
+    for(let d=1; d<=lastDate; d++) {
+        const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
+        let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
+        events.sort((a, b) => a.time.localeCompare(b.time));
+        
+        const dayOfWeek = new Date(year, month, d).getDay();
+        let cls = isToday ? 'today' : '';
+        if(dayOfWeek === 0) cls += ' sun'; if(dayOfWeek === 6) cls += ' sat';
+
+        html += `
+            <div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})">
+                <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
+                <div class="cal-event-container">
+                    ${events.map(ev => `<div class="cal-event-item">${esc(ev.content)}</div>`).join('')}
+                </div>
+            </div>`;
+    }
+    
+    html += `</div><div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div></div>`;
+    container.innerHTML = html;
+}
+
+function renderCalendarDetail(container) {
+    const dateKey = route.date;
+    let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
+    events.sort((a, b) => a[1].time.localeCompare(b[1].time));
+    
+    container.innerHTML = `
+        <div class="card">
+            <h2 style="margin-top:0; font-size: 1.2rem;">${dateKey} 일정 추가</h2>
+            <label>시간</label><input id="calTime" type="time" value="12:00">
+            <label>내용</label><textarea id="calContent" rows="3" placeholder="일정을 입력하세요"></textarea>
+            <button onclick="saveCal('${dateKey}')">일정 추가하기</button>
+            <hr style="margin:20px 0; border:0; border-top:1px solid var(--line);">
+            <b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>
+            ${events.map(([id, ev]) => `
+                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+                    <div><small>${ev.time}</small><br><b>${esc(ev.content)}</b></div>
+                    <button class="small red" style="width:auto;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button>
+                </div>
+            `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
+            <button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button>
+        </div>`;
+}
+
+function askDeleteCal(dateKey, id) {
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;">
+        <b>일정 삭제 확인</b>
+        <p style="margin-top:10px;">이 일정을 삭제할까요?</p>
+        <div class="btn-row">
+            <button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button>
+            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
+        </div>
+    </div>`;
+}
+
+function doDeleteCal(dateKey, id) {
+    db.ref(`calendar_v2/${dateKey}/${id}`).remove().then(() => {
+        document.getElementById("pwModal").style.display = "none";
+        render();
+    });
+}
+
+function saveCal(dateKey) {
+    const time = document.getElementById("calTime").value;
+    const content = document.getElementById("calContent").value.trim();
+    if(!content) return alert("내용을 입력해주세요.");
+    db.ref("calendar_v2/" + dateKey).push({ time, content }).then(() => { render(); });
+}
+
+function changeMonth(diff) {
+    currentCalDate.setMonth(currentCalDate.getMonth() + diff);
+    render();
+}
+
+function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function getStatus(r){
+  const mom = r.mom || "pending"; const dad = r.dad || "pending";
+  if(mom === "pending" || dad === "pending") return "대기";
+  return (mom === "approve" && dad === "approve") ? "찬성" : "반대";
+}
+function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
+function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
+function renderLog(name, res, comm, time) {
+    const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳');
+    return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`;
+}
+
+function toggleEdit(dbId) {
+    const btn = document.getElementById("btnEditMain");
+    const isEditing = btn.innerText === "저장";
+    if(!isEditing) {
+        document.getElementById("view-title").disabled = false;
+        document.getElementById("view-purpose").disabled = false;
+        document.getElementById("view-cost").disabled = false;
+        btn.innerText = "저장"; btn.classList.add("green");
+    } else {
+        const updates = {
+            title: document.getElementById("view-title").value.trim(),
+            purpose: document.getElementById("view-purpose").value.trim(),
+            cost: document.getElementById("view-cost").value.replace(/,/g, '')
+        };
+        db.ref("approvals/"+dbId).update(updates).then(() => { alert("수정되었습니다."); render(); });
+    }
+}
+
+function confirmSubmit() {
+  const t = document.getElementById("t").value.trim();
+  const p = document.getElementById("p").value.trim();
+  const pl = document.getElementById("pl").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
+  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
+  const m = document.getElementById("pwModal"); m.style.display = "flex";
+  m.innerHTML = `<div class="card" style="text-align:center;"><b>의견 상신 확인</b><p style="margin-top:10px;">이대로 의견을 올릴까요?</p><div class="btn-row"><button class="fit" onclick="submit()">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
+}
+
+function submit(){
+  const t = document.getElementById("t").value.trim();
+  const p = document.getElementById("p").value.trim();
+  const pl = document.getElementById("pl").value.trim();
+  const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
+  const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
+  db.ref("approvals").push(newPost).then(() => { navigate({page:'list'}); document.getElementById('pwModal').style.display='none'; });
+}
+
+function askDelete(dbId){
+  const m = document.getElementById("pwModal"); m.style.display="flex";
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+}
+
+function authDelete(dbId){
+  if(document.getElementById("delPw").value === PASSWORD){
+    db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; });
+  } else { alert("비밀번호가 틀렸습니다."); }
+}
+
+function openParent(id){
+  const m = document.getElementById("pwModal"); m.style.display="flex";
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+}
+
+function authParent(id){
+  if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
+  document.getElementById("pwModal").style.display="none";
+  const r = allData.find(x=>String(x.id)===String(id));
+  let h = "";
+  if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}')">반대</button></div></div>`;
+  if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}')">반대</button></div></div>`;
+  document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
+}
+
+function confirmDecide(dbId, who, val, title) {
+    const comment = document.getElementById(who + "C").value.trim();
+    if (!comment) return alert("의견을 반드시 입력해야 합니다.");
+    db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => { navigate({page:'list'}); });
+}
+
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function openStats(){
   const stats = {};
@@ -374,15 +412,16 @@ function openStats(){
     const key = item.time.substring(0,7).replace("-","년 ") + "월";
     if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0};
     const s = getStatus(item); const c = Number(item.cost);
-    if(s==="승인"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; }
+    if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; }
   });
   const sorted = Object.keys(stats).sort().reverse();
-  const m = document.getElementById("statModal");
-  m.style.display="flex";
-  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 승인: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반려: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("") || "기록 없음"}</div><button onclick="this.parentNode.parentNode.style.display='none'" style="width:100%">닫기</button></div>`;
+  const m = document.getElementById("statModal"); m.style.display="flex";
+  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
 }
+
 window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } };
 history.replaceState({page:'list'}, "");
+function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
 </script>
 </body>
 </html>
