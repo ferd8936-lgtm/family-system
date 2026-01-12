@@ -222,7 +222,7 @@ function render(){
         ${renderLog('엄마', r.mom, r.momC, r.momTime)}${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
       </div>
       <div id="parentArea"></div>
-      <div id="btnParentAuth" style="text-align:center; display: ${getStatus(r) === '대기' ? 'block' : 'none'};">
+      <div style="text-align:center; margin-bottom:10px;">
         <button class="btn-parent-input" onclick="openParent('${r.id}')">부모 의견 입력</button>
       </div>
       <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
@@ -254,8 +254,7 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    // 1. 의견 올리기 문자 양식 수정
-    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
+    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
@@ -327,27 +326,68 @@ function getStatus(r){ const mom = r.mom || "pending", dad = r.dad || "pending";
 function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
 function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
 function renderLog(name, res, comm, time) { const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳'); return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`; }
+
+// 1. 아이의 의견 수정 시 문자 발송 기능 반영
 function toggleEdit(dbId) {
     const btn = document.getElementById("btnEditMain");
-    if(btn.innerText !== "저장") { document.getElementById("view-title").disabled = false; document.getElementById("view-purpose").disabled = false; document.getElementById("view-cost").disabled = false; btn.innerText = "저장"; btn.classList.add("green"); } 
-    else { const updates = { title: document.getElementById("view-title").value.trim(), purpose: document.getElementById("view-purpose").value.trim(), cost: document.getElementById("view-cost").value.replace(/,/g, '') }; db.ref("approvals/"+dbId).update(updates).then(() => { alert("수정되었습니다."); render(); }); }
+    if(btn.innerText !== "저장") { 
+        document.getElementById("view-title").disabled = false; 
+        document.getElementById("view-purpose").disabled = false; 
+        document.getElementById("view-cost").disabled = false; 
+        btn.innerText = "저장"; btn.classList.add("green"); 
+    } 
+    else { 
+        const updates = { 
+            title: document.getElementById("view-title").value.trim(), 
+            purpose: document.getElementById("view-purpose").value.trim(), 
+            cost: document.getElementById("view-cost").value.replace(/,/g, '') 
+        }; 
+        db.ref("approvals/"+dbId).update(updates).then(() => { 
+            const msg = `[똑똑! 가족 게시판]\n아이의 의견이 수정되었습니다!`;
+            const m = document.getElementById("pwModal");
+            m.style.display = "flex";
+            m.innerHTML = `<div class="card" style="text-align:center;">
+                <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 수정 완료</b>
+                <p style="color:#666; margin-bottom:20px;">수정 사실을 가족들에게 알릴까요?</p>
+                <div class="btn-row">
+                  <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; render();">문자 보내기</a>
+                  <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; render();">그냥 닫기</button>
+                </div>
+              </div>`;
+        }); 
+    }
 }
+
 function askDelete(dbId){
   const m = document.getElementById("pwModal"); m.style.display="flex";
   m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
 }
 function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; }); } else { alert("비밀번호가 틀렸습니다."); } }
-function openParent(id){ const m = document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`; }
+
+// 2. 부모 의견 수정 기능 반영 (기존 의견 로드 및 수정 프로세스)
+function openParent(id){
+  const m = document.getElementById("pwModal"); m.style.display="flex";
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+}
+
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
-  const r = allData.find(x=>String(x.id)===String(id)); let h = "";
-  if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
-  if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
-  document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
+  const r = allData.find(x=>String(x.id)===String(id)); 
+  let h = "";
+  // 기존 의견이 있으면 밸류값으로 넣어줌
+  const momVal = r.momC || tempParentInput.momC;
+  const dadVal = r.dadC || tempParentInput.dadC;
+  
+  h += `<div class="card"><b>엄마 의견 (수정가능)</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea>
+        <div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', true)">수정 찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', true)">수정 반대</button></div></div>`;
+  h += `<div class="card"><b>아빠 의견 (수정가능)</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea>
+        <div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', true)">수정 찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', true)">수정 반대</button></div></div>`;
+  
+  document.getElementById("parentArea").innerHTML = h;
 }
 
-function confirmDecide(dbId, who, val, title, cost) {
+function confirmDecide(dbId, who, val, title, cost, isEdit = false) {
     const comment = document.getElementById(who + "C").value.trim();
     if (!comment) return alert("의견을 반드시 입력해야 합니다.");
     
@@ -355,27 +395,27 @@ function confirmDecide(dbId, who, val, title, cost) {
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
         <b>의견 등록 확인</b>
-        <p style="margin-top:10px;">의견을 등록하시겠습니까?</p>
+        <p style="margin-top:10px;">의견을 ${isEdit ? '수정' : '등록'}하시겠습니까?</p>
         <div class="btn-row">
-            <button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}', '${cost}')">확인</button>
+            <button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}', '${cost}', ${isEdit})">확인</button>
             <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
         </div>
     </div>`;
 }
 
-function decide(dbId, who, val, title, cost){
+function decide(dbId, who, val, title, cost, isEdit = false){
     const comment = document.getElementById(who+"C").value;
     if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
     
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-        // 2. 부모 결정 시 문자 내용 수정
         const whoKo = (who === 'mom' ? '엄마' : '아빠');
-        const msg = `[똑똑! 가족게시판]\n${whoKo}의 의견이 등록되었습니다`;
+        // 요청된 문자 내용 반영
+        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo} 의견이 수정되었습니다!` : `[똑똑! 가족게시판]\n${whoKo}의 의견이 등록되었습니다`;
         const m = document.getElementById("pwModal");
         m.style.display = "flex";
         m.innerHTML = `<div class="card" style="text-align:center;">
-            <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b>
-            <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
+            <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 처리 완료</b>
+            <p style="color:#666; margin-bottom:20px;">가족들에게 문자로 알릴까요?</p>
             <div class="btn-row">
               <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a>
               <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button>
