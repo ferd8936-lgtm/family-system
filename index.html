@@ -17,7 +17,8 @@
 *{box-sizing:border-box}
 body, button, input, textarea {margin:0; font-family:'NexonLv2Gothic', sans-serif; background:var(--bg);}
 header{padding:20px 16px;text-align:center;background:#fff;border-bottom:1px solid var(--line);}
-header h1 {margin:0; font-size:24px; font-weight:700;}
+/* 2. 타이틀 클릭 시 새로고침 및 메인이동 스타일 추가 */
+header h1 {margin:0; font-size:24px; font-weight:700; cursor: pointer; display: inline-block;}
 header p {margin:8px 0 0; font-size:16.8px; color:#666; line-height: 1.4;}
 
 main{max-width:1100px;margin:auto;padding:16px;}
@@ -40,7 +41,6 @@ input:disabled, textarea:disabled { background: transparent; color: #333; border
 input::placeholder, textarea::placeholder { color: #aaa; }
 label{font-weight:600;margin-top:14px;display:flex; align-items: center; justify-content: space-between;}
 
-/* 1. 계획 입력 칸 세로 사이즈를 의견 칸과 동일하게 수정 (160px -> 100px) */
 textarea.purpose-box, textarea.plan-box { height: 100px !important; min-height: 100px !important; overflow-y: auto !important; resize: none; }
 
 .top-actions {display:flex; gap:8px; margin-bottom:12px; justify-content: flex-start; align-items: center;}
@@ -72,12 +72,10 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; width: 100%; border-bottom: 1px solid var(--line); }
 .cal-day-label { background: #fdfdfd; padding: 10px 0; text-align: center; font-size: 13px; font-weight: bold; border-bottom: 1px solid var(--line); }
-/* 2. 오늘 배경색 제거하고 일반 날짜와 동일하게 수정 */
 .cal-day { background: #fff; min-height: 120px; padding: 4px; font-size: 12px; cursor: pointer; position: relative; display: flex; flex-direction: column; gap: 4px; }
 .cal-day.sun { color: red; }
 .cal-day.sat { color: blue; }
 .cal-day.other { color: #ccc; background: #fafafa; }
-/* .cal-day.today 배경색 제거 */
 .cal-day.today { background: #fff; } 
 .today-text { font-size: 9px; color: var(--brand); font-weight: bold; margin-left: 4px; vertical-align: middle; }
 
@@ -96,7 +94,7 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 </head>
 <body>
 <header id="main-header">
-    <h1>똑똑!! 가족 게시판</h1>
+    <h1 onclick="goHome()">똑똑!! 가족 게시판</h1>
     <p>엄마와 아빠는 언제나 너의 멋진 계획을 응원해!</p>
 </header>
 <main id="app">데이터 로딩 중...</main>
@@ -124,16 +122,23 @@ let calendarData = {};
 let currentCalDate = new Date();
 let tempParentInput = { momC: "", dadC: "" };
 
+// 2. 스크롤 업데이트 중단 및 조건부 렌더링
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
-  render();
+  // 메인 목록 페이지인 경우에만 자동 업데이트 (작성 중 화면 전환 방지)
+  if(route.page === "list") render();
 });
 
 db.ref("calendar_v2").on("value", (snapshot) => {
   calendarData = snapshot.val() || {};
   if(route.page === 'calendar' || route.page === 'calDetail') render();
 });
+
+// 상단 문구 클릭 시 메인 이동 및 새로고침
+function goHome() {
+    navigate({page:'list'});
+}
 
 function navigate(p, push=true){ 
   route = p; 
@@ -224,13 +229,14 @@ function render(){
   }
 }
 
+// 1. 캘린더 스와이프 기능 추가
 function renderCalendarView(container) {
     const year = currentCalDate.getFullYear();
     const month = currentCalDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const lastDate = new Date(year, month + 1, 0).getDate();
     
-    let html = `<div class="cal-wrapper">
+    let html = `<div class="cal-wrapper" id="calTouchArea">
         <div class="cal-header">
             <button class="gray small" onclick="changeMonth(-1)">◀</button>
             <b style="font-size:20px;">${year}년 ${month + 1}월</b>
@@ -264,6 +270,19 @@ function renderCalendarView(container) {
     
     html += `</div><div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div></div>`;
     container.innerHTML = html;
+
+    // 터치 스와이프 이벤트 등록
+    const touchArea = document.getElementById('calTouchArea');
+    let touchStartX = 0;
+    touchArea.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX, false);
+    touchArea.addEventListener('touchend', e => {
+        let touchEndX = e.changedTouches[0].clientX;
+        let diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) { // 50px 이상 이동 시 스와이프로 간주
+            if (diff > 0) changeMonth(1); // 왼쪽으로 밀면 다음 달
+            else changeMonth(-1); // 오른쪽으로 밀면 이전 달
+        }
+    }, false);
 }
 
 function renderCalendarDetail(container) {
