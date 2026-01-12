@@ -140,11 +140,7 @@ function goHome() {
 
 function navigate(p, push=true){ 
   route = p; 
-  // 2. 메인 페이지로 이동할 때는 히스토리를 새로 쌓지 않고 대체하여 뒤로가기 시 앱 종료 유도
-  if(push) {
-      if(p.page === 'list') history.replaceState(p, "");
-      else history.pushState(p, "");
-  }
+  if(push) history.pushState(p, "");
   render(); 
 }
 
@@ -470,21 +466,22 @@ function openStats(){
   m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
 }
 
-// 2. 메인 페이지 뒤로가기 종료 로직
+// 2. 뒤로가기 로직 최종 수정: 메인화면이면 종료 확인, 아니면 뒤로가기 수행
 window.onpopstate = (e) => { 
-  if(e.state && e.state.page !== 'list') { 
-    route = e.state; 
-    render(); 
-  } else {
-    // 메인화면이거나 히스토리가 없는 상태
+  if(route.page === 'list') {
+    // 현재 페이지가 메인이면 앱 종료 확인
     if (confirm("프로그램을 종료하시겠습니까?")) {
-        // 실제 앱 종료는 브라우저 보안상 불가능하므로 히스토리 첫 페이지로 이동 처리
-        window.close(); 
-        // 모바일 브라우저의 경우 홈화면 이동 등은 환경에 따라 다르나, 
-        // confirm을 통해 이탈 의사를 확인하는 것이 최선입니다.
+        history.back(); 
     } else {
-        // 종료 취소 시 다시 상태 유지
         history.pushState({page:'list'}, "");
+    }
+  } else {
+    // 그 외 화면이면 이전 히스토리 상태로 복구
+    if(e.state) {
+      route = e.state;
+      render();
+    } else {
+      navigate({page:'list'});
     }
   }
 };
