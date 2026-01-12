@@ -255,7 +255,7 @@ function submit(){
   
   db.ref("approvals").push(newPost).then(() => {
     // 1. 의견 올리기 문자 양식 수정
-    const msg = `[똑똑! 가족게시판]\n의견이 접수되었습니다\n\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
+    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
@@ -395,3 +395,4 @@ history.replaceState({page:'list'}, "");
 </script>
 </body>
 </html>
+
