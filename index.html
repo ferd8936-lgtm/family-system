@@ -59,6 +59,7 @@ tr.approval-row {cursor: pointer;-webkit-user-select: none;user-select: none;}
 td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .badge{padding:6px 10px;border-radius:6px;color:#fff;font-size:13px;font-weight:700; white-space: nowrap;}
 .ok{background:var(--ok)}.no{background:var(--bad)}.wait{background:var(--wait)}
+.new-badge {background:#dc2626; color:#fff; font-size:10px; padding:2px 4px; border-radius:4px; margin-right:4px; vertical-align: middle; font-weight: bold;}
 
 .parent-result{margin-top:12px;padding:12px;border-radius:8px;background:#f9fafb;border:1px solid var(--line); line-height: 1.6; margin-bottom: 10px;}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index: 1000;}
@@ -134,19 +135,24 @@ db.ref("calendar_v2").on("value", (snapshot) => {
   if(route.page === 'calendar' || route.page === 'calDetail') render();
 });
 
-function goHome() {
-    navigate({page:'list'});
-}
+function goHome() { navigate({page:'list'}); }
 
 function navigate(p, push=true){ 
   route = p; 
   if(push) {
       if(p.page === 'list') {
-          // 메인으로 갈 때는 히스토리를 다 비우고 최상단으로 설정
           window.history.pushState(null, "", window.location.pathname);
           window.history.replaceState(p, "");
       } else {
           history.pushState(p, "");
+      }
+  }
+  // 상세페이지 조회 시 읽음 목록 업데이트 (NEW 표시 제어용)
+  if(p.page === 'view' && p.id) {
+      let readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
+      if(!readList.includes(p.id)) {
+          readList.push(p.id);
+          localStorage.setItem('readApprovals', JSON.stringify(readList));
       }
   }
   render(); 
@@ -155,7 +161,6 @@ function navigate(p, push=true){
 function render(){
   const app = document.getElementById("app");
   const header = document.getElementById("main-header");
-  
   document.body.classList.remove("full-view");
   header.style.display = (route.page === "calendar") ? "none" : "block";
 
@@ -163,6 +168,7 @@ function render(){
     let displayData = [...allData];
     if(keyword) displayData = displayData.filter(x => JSON.stringify(x).includes(keyword));
     displayData.sort((a,b) => b.time.localeCompare(a.time));
+    const readList = JSON.parse(localStorage.getItem('readApprovals') || '[]');
 
     app.innerHTML = `
       <div class="top-actions">
@@ -181,9 +187,10 @@ function render(){
           <tbody>
             ${displayData.map((r,i)=>{
               const status = getStatus(r);
+              const isNew = !readList.includes(r.id) && status === '대기';
               return `<tr class="approval-row" onclick="navigate({page:'view', id:'${r.id}'})">
                   <td>${displayData.length - i}</td>
-                  <td class="title"><div>${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
+                  <td class="title"><div>${isNew ? '<span class="new-badge">NEW</span>' : ''}${esc(r.title)}</div><small style="color:#888;">${r.time}</small></td>
                   <td>${badge(status)}</td>
                 </tr>`;
             }).join("")}
@@ -206,19 +213,14 @@ function render(){
     app.innerHTML = `
       <div class="view-time-header">상신: ${r.time}</div>
       <div class="card">
-        <label style="margin-top:0;">
-            제목
-            <button id="btnEditMain" class="small gray" style="width: auto; margin-left: auto;" onclick="toggleEdit('${r.dbId}')">수정</button>
-        </label>
+        <label style="margin-top:0;">제목<button id="btnEditMain" class="small gray" style="width: auto; margin-left: auto;" onclick="toggleEdit('${r.dbId}')">수정</button></label>
         <input id="view-title" disabled value="${esc(r.title)}">
         <label>의견</label><textarea id="view-purpose" class="purpose-box" disabled>${esc(r.purpose)}</textarea>
         <label>계획</label><textarea id="view-plan" class="plan-box" readonly>${esc(r.plan)}</textarea>
         <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
       </div>
-      <div class="parent-result">
-        <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
-        ${renderLog('엄마', r.mom, r.momC, r.momTime)}
-        ${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
+      <div class="parent-result"><div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
+        ${renderLog('엄마', r.mom, r.momC, r.momTime)}${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
       </div>
       <div id="parentArea"></div>
       <div id="btnParentAuth" style="text-align:center; display: ${getStatus(r) === '대기' ? 'block' : 'none'};">
@@ -226,159 +228,13 @@ function render(){
       </div>
       <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
   }
-  else if(route.page === "calendar"){
-    document.body.classList.add("full-view");
-    renderCalendarView(app);
-  }
-  else if(route.page === "calDetail"){
-    renderCalendarDetail(app);
-  }
+  else if(route.page === "calendar"){ document.body.classList.add("full-view"); renderCalendarView(app); }
+  else if(route.page === "calDetail"){ renderCalendarDetail(app); }
 }
 
-function renderCalendarView(container) {
-    const year = currentCalDate.getFullYear();
-    const month = currentCalDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
-    
-    let html = `<div class="cal-wrapper" id="calTouchArea">
-        <div class="cal-header">
-            <button class="gray small" onclick="changeMonth(-1)">◀</button>
-            <b style="font-size:20px;">${year}년 ${month + 1}월</b>
-            <button class="gray small" onclick="changeMonth(1)">▶</button>
-        </div>
-        <div class="cal-grid">
-            <div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div>
-            <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
-    `;
-
-    for(let i=0; i<firstDay; i++) html += `<div class="cal-day other"></div>`;
-    
-    for(let d=1; d<=lastDate; d++) {
-        const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
-        let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
-        events.sort((a, b) => a.time.localeCompare(b.time));
-        
-        const dayOfWeek = new Date(year, month, d).getDay();
-        let cls = isToday ? 'today' : '';
-        if(dayOfWeek === 0) cls += ' sun'; if(dayOfWeek === 6) cls += ' sat';
-
-        html += `
-            <div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})">
-                <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
-                <div class="cal-event-container">
-                    ${events.map(ev => `<div class="cal-event-item">${esc(ev.content)}</div>`).join('')}
-                </div>
-            </div>`;
-    }
-    
-    html += `</div><div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div></div>`;
-    container.innerHTML = html;
-
-    const touchArea = document.getElementById('calTouchArea');
-    let touchStartX = 0;
-    touchArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, false);
-    touchArea.addEventListener('touchend', e => {
-        let touchEndX = e.changedTouches[0].clientX;
-        let diff = touchStartX - touchEndX;
-        if (Math.abs(diff) > 50) {
-            touchArea.classList.add('fade-out');
-            setTimeout(() => {
-                if (diff > 0) changeMonth(1); 
-                else changeMonth(-1);
-                touchArea.classList.remove('fade-out');
-            }, 150);
-        }
-    }, false);
-}
-
-function renderCalendarDetail(container) {
-    const dateKey = route.date;
-    let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
-    events.sort((a, b) => a[1].time.localeCompare(b[1].time));
-    
-    container.innerHTML = `
-        <div class="card">
-            <h2 style="margin-top:0; font-size: 1.2rem;">${dateKey} 일정 추가</h2>
-            <label>시간</label><input id="calTime" type="time" value="12:00">
-            <label>내용</label><textarea id="calContent" rows="3" placeholder="일정을 입력하세요"></textarea>
-            <button onclick="saveCal('${dateKey}')">일정 추가하기</button>
-            <hr style="margin:20px 0; border:0; border-top:1px solid var(--line);">
-            <b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>
-            ${events.map(([id, ev]) => `
-                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
-                    <div><small>${ev.time}</small><br><b>${esc(ev.content)}</b></div>
-                    <button class="small red" style="width:auto;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button>
-                </div>
-            `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
-            <button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button>
-        </div>`;
-}
-
-function askDeleteCal(dateKey, id) {
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
-    m.innerHTML = `<div class="card" style="text-align:center;">
-        <b>일정 삭제 확인</b>
-        <p style="margin-top:10px;">이 일정을 삭제할까요?</p>
-        <div class="btn-row">
-            <button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button>
-            <button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button>
-        </div>
-    </div>`;
-}
-
-function doDeleteCal(dateKey, id) {
-    db.ref(`calendar_v2/${dateKey}/${id}`).remove().then(() => {
-        document.getElementById("pwModal").style.display = "none";
-        render();
-    });
-}
-
-function saveCal(dateKey) {
-    const time = document.getElementById("calTime").value;
-    const content = document.getElementById("calContent").value.trim();
-    if(!content) return alert("내용을 입력해주세요.");
-    db.ref("calendar_v2/" + dateKey).push({ time, content }).then(() => { render(); });
-}
-
-function changeMonth(diff) {
-    currentCalDate.setMonth(currentCalDate.getMonth() + diff);
-    render();
-}
-
-function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
-function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-function getStatus(r){
-  const mom = r.mom || "pending"; const dad = r.dad || "pending";
-  if(mom === "pending" || dad === "pending") return "대기";
-  return (mom === "approve" && dad === "approve") ? "찬성" : "반대";
-}
-function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
-function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
-function renderLog(name, res, comm, time) {
-    const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳');
-    return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`;
-}
-
-function toggleEdit(dbId) {
-    const btn = document.getElementById("btnEditMain");
-    const isEditing = btn.innerText === "저장";
-    if(!isEditing) {
-        document.getElementById("view-title").disabled = false;
-        document.getElementById("view-purpose").disabled = false;
-        document.getElementById("view-cost").disabled = false;
-        btn.innerText = "저장"; btn.classList.add("green");
-    } else {
-        const updates = {
-            title: document.getElementById("view-title").value.trim(),
-            purpose: document.getElementById("view-purpose").value.trim(),
-            cost: document.getElementById("view-cost").value.replace(/,/g, '')
-        };
-        db.ref("approvals/"+dbId).update(updates).then(() => { alert("수정되었습니다."); render(); });
-    }
+function getSmsUrl(text) {
+    const ua = navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(ua) ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
 }
 
 function confirmSubmit() {
@@ -406,87 +262,103 @@ function submit(){
         <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b>
         <p style="color:#666; margin-bottom:20px;">가족들에게 문자를 보낼까요?</p>
         <div class="btn-row">
-          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">문자 보내기</a>
-          <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
+          <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a>
+          <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button>
         </div>
       </div>`;
   });
 }
 
+function renderCalendarView(container) {
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    let html = `<div class="cal-wrapper" id="calTouchArea">
+        <div class="cal-header"><button class="gray small" onclick="changeMonth(-1)">◀</button><b style="font-size:20px;">${year}년 ${month + 1}월</b><button class="gray small" onclick="changeMonth(1)">▶</button></div>
+        <div class="cal-grid"><div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div><div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>`;
+    for(let i=0; i<firstDay; i++) html += `<div class="cal-day other"></div>`;
+    for(let d=1; d<=lastDate; d++) {
+        const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
+        let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
+        events.sort((a, b) => a.time.localeCompare(b.time));
+        const dayOfWeek = new Date(year, month, d).getDay();
+        let cls = isToday ? 'today' : '';
+        if(dayOfWeek === 0) cls += ' sun'; if(dayOfWeek === 6) cls += ' sat';
+        html += `<div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})"><b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b><div class="cal-event-container">${events.map(ev => `<div class="cal-event-item">${esc(ev.content)}</div>`).join('')}</div></div>`;
+    }
+    html += `</div><div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div></div>`;
+    container.innerHTML = html;
+    const touchArea = document.getElementById('calTouchArea');
+    let touchStartX = 0;
+    touchArea.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, false);
+    touchArea.addEventListener('touchend', e => {
+        let diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) { touchArea.classList.add('fade-out'); setTimeout(() => { changeMonth(diff > 0 ? 1 : -1); touchArea.classList.remove('fade-out'); }, 150); }
+    }, false);
+}
+
+function renderCalendarDetail(container) {
+    const dateKey = route.date;
+    let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
+    events.sort((a, b) => a[1].time.localeCompare(b[1].time));
+    container.innerHTML = `<div class="card"><h2 style="margin-top:0; font-size: 1.2rem;">${dateKey} 일정 추가</h2><label>시간</label><input id="calTime" type="time" value="12:00"><label>내용</label><textarea id="calContent" rows="3" placeholder="일정을 입력하세요"></textarea><button onclick="saveCal('${dateKey}')">일정 추가하기</button><hr style="margin:20px 0; border:0; border-top:1px solid var(--line);"><b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>${events.map(([id, ev]) => `<div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;"><div><small>${ev.time}</small><br><b>${esc(ev.content)}</b></div><button class="small red" style="width:auto;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button></div>`).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}<button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button></div>`;
+}
+
+function askDeleteCal(dateKey, id) {
+    const m = document.getElementById("pwModal"); m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
+}
+function doDeleteCal(dateKey, id) { db.ref(`calendar_v2/${dateKey}/${id}`).remove().then(() => { document.getElementById("pwModal").style.display = "none"; render(); }); }
+function saveCal(dateKey) {
+    const time = document.getElementById("calTime").value; const content = document.getElementById("calContent").value.trim();
+    if(!content) return alert("내용을 입력해주세요.");
+    db.ref("calendar_v2/" + dateKey).push({ time, content }).then(() => { render(); });
+}
+function changeMonth(diff) { currentCalDate.setMonth(currentCalDate.getMonth() + diff); render(); }
+function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function getStatus(r){ const mom = r.mom || "pending", dad = r.dad || "pending"; if(mom === "pending" || dad === "pending") return "대기"; return (mom === "approve" && dad === "approve") ? "찬성" : "반대"; }
+function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
+function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
+function renderLog(name, res, comm, time) { const icon = res === 'approve' ? '✅' : (res === 'reject' ? '❌' : '⏳'); return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`; }
+function toggleEdit(dbId) {
+    const btn = document.getElementById("btnEditMain");
+    if(btn.innerText !== "저장") { document.getElementById("view-title").disabled = false; document.getElementById("view-purpose").disabled = false; document.getElementById("view-cost").disabled = false; btn.innerText = "저장"; btn.classList.add("green"); } 
+    else { const updates = { title: document.getElementById("view-title").value.trim(), purpose: document.getElementById("view-purpose").value.trim(), cost: document.getElementById("view-cost").value.replace(/,/g, '') }; db.ref("approvals/"+dbId).update(updates).then(() => { alert("수정되었습니다."); render(); }); }
+}
 function askDelete(dbId){
   const m = document.getElementById("pwModal"); m.style.display="flex";
   m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
 }
-
-function authDelete(dbId){
-  if(document.getElementById("delPw").value === PASSWORD){
-    db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; });
-  } else { alert("비밀번호가 틀렸습니다."); }
-}
-
-function openParent(id){
-  const m = document.getElementById("pwModal"); m.style.display="flex";
-  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
-}
-
+function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; }); } else { alert("비밀번호가 틀렸습니다."); } }
+function openParent(id){ const m = document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`; }
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
-  const r = allData.find(x=>String(x.id)===String(id));
-  let h = "";
+  const r = allData.find(x=>String(x.id)===String(id)); let h = "";
   if(r.mom==='pending') h+=`<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${tempParentInput.momC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}')">반대</button></div></div>`;
   if(r.dad==='pending') h+=`<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${tempParentInput.dadC}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}')">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}')">반대</button></div></div>`;
   document.getElementById("parentArea").innerHTML = h; document.getElementById("btnParentAuth").style.display = "none";
 }
-
 function confirmDecide(dbId, who, val, title) {
-    const comment = document.getElementById(who + "C").value.trim();
-    if (!comment) return alert("의견을 반드시 입력해야 합니다.");
-    
-    const resultStr = val === 'approve' ? '✅찬성' : '❌반대';
-    const msg = `[의견결과] 대호의 상신: ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
-    
+    const comment = document.getElementById(who + "C").value.trim(); if (!comment) return alert("의견을 반드시 입력해야 합니다.");
+    const resultStr = val === 'approve' ? '✅찬성' : '❌반대', msg = `[의견결과] 대호의 상신: ${title}\n${who==='mom'?'엄마':'아빠'}님이 ${resultStr} 하셨습니다.\n의견: ${comment || '없음'}`;
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-        const m = document.getElementById("pwModal");
-        m.style.display = "flex";
-        m.innerHTML = `<div class="card" style="text-align:center;">
-            <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b>
-            <p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p>
-            <div class="btn-row">
-              <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">문자 보내기</a>
-              <button class="gray" onclick="navigate({page:'list'}); document.getElementById('pwModal').style.display='none';">그냥 닫기</button>
-            </div>
-          </div>`;
+        const m = document.getElementById("pwModal"); m.style.display = "flex";
+        m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 입력 완료</b><p style="color:#666; margin-bottom:20px;">결과를 가족들에게 문자로 알릴까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
     });
 }
-
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function openStats(){
-  const stats = {};
-  allData.filter(x => getStatus(x) !== "대기").forEach(item => {
-    const key = item.time.substring(0,7).replace("-","년 ") + "월";
-    if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0};
-    const s = getStatus(item); const c = Number(item.cost);
-    if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; }
-  });
-  const sorted = Object.keys(stats).sort().reverse();
-  const m = document.getElementById("statModal"); m.style.display="flex";
+  const stats = {}; allData.filter(x => getStatus(x) !== "대기").forEach(item => { const key = item.time.substring(0,7).replace("-","년 ") + "월"; if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0}; const s = getStatus(item), c = Number(item.cost); if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; } });
+  const sorted = Object.keys(stats).sort().reverse(), m = document.getElementById("statModal"); m.style.display="flex";
   m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
 }
-
-// 1. 뒤로가기 로직 수정: 메인화면이면 히스토리 백(종료), 아니면 이전 상태로
-window.onpopstate = (e) => { 
-  if(e.state) {
-    route = e.state;
-    render();
-  } else {
-    // 히스토리가 없거나 메인에서 뒤로가기 시 브라우저 기본 동작(나가기) 수행
-    window.history.back();
-  }
-};
-
+window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } else { window.history.back(); } };
 history.replaceState({page:'list'}, "");
-function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
 </script>
 </body>
 </html>
