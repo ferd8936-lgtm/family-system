@@ -136,9 +136,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// 4. 캘린더 데이터 초기화 (코드 실행 시 1회 수행됨)
-db.ref("calendar_v3").remove();
-
 const holidays = {
     "01-01": { name: "신정", red: true },
     "03-01": { name: "삼일절", red: true },
@@ -642,3 +639,4 @@ history.replaceState({page:'list'}, "");
 </script>
 </body>
 </html>
+
