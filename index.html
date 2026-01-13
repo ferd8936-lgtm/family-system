@@ -68,19 +68,21 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-/* 캘린더 메인 화면 한 화면에 보이도록 최적화 */
+/* 캘린더 메인 화면 비율 최적화 - 한 화면에 다 보이도록 수정 */
 .cal-wrapper { background: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
 .cal-container { display: flex; width: 300%; flex: 1; transition: transform 0.3s ease-out; }
 .cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
 
-.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; width: 100%; }
 
-/* 요일 칸 디자인 수정 - 하단 경계선 및 여백 제거 */
-.cal-day-label { background: #fdfdfd; height: 22px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; line-height: 1; border-bottom: none; }
+/* 여백 제거를 위해 gap: 0 및 border 설정 */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 0; flex: 1; width: 100%; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 
-.cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
+/* 요일 칸 세로 사이즈 및 가운데 정렬 수정 */
+.cal-day-label { background: #fdfdfd; height: 24px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; line-height: 1; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+.cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); flex: 1; }
 .cal-day.sun { color: red; }
 .cal-day.sat { color: blue; }
 .cal-day.other { color: #ccc !important; background: #fafafa; }
@@ -100,8 +102,7 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* 하단 버튼 영역 한 화면 보기에 고정 */
-.cal-footer { padding: 10px 15px; background: var(--bg); flex-shrink: 0; border-top: 1px solid var(--line); }
+.cal-footer { padding: 8px 15px; background: var(--bg); flex-shrink: 0; border-top: 1px solid var(--line); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
