@@ -75,7 +75,7 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 
-/* 3. 세로 행 높이 고정 및 일정 잘림 유지 */
+/* 4. 세로 행 높이 고정 */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 110px); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; overflow: hidden; }
 .cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
 
@@ -86,14 +86,14 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-day.other { color: #ccc !important; background: #fafafa; }
 .cal-day.today { background: #fff; outline: 1px solid #000; outline-offset: -1px; z-index: 1; }
 
-/* 5. 공휴일 폰트 및 크기 일관성 유지 */
-.holiday-text { font-size: 10.8px; font-weight: bold; line-height: 1; display: inline-block; font-family: 'NexonLv2Gothic', sans-serif; margin-left: 2px; }
+/* 3. 공휴일 한줄 표시 */
+.holiday-text { font-size: 10.8px; font-weight: bold; line-height: 1; display: inline-block; font-family: 'NexonLv2Gothic', sans-serif; margin-left: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
 .holiday-red { color: red; }
 .holiday-black { color: black; }
 
 .cal-event-container { display: flex; flex-direction: column; gap: 2px; width: 100%; overflow: hidden; }
 
-/* 1. 글자 배경색 세로폭 글자에 딱 맞게 조정 */
+/* 1, 2. 일정 제목 3개 제한 및 글자 배경 세로폭 최적화 */
 .cal-event-item { 
     color: #000; 
     background-color: #eef2ff; 
@@ -111,6 +111,13 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     white-space: normal;
     font-family: 'NexonLv2Gothic', sans-serif;
 }
+
+/* 2. 4개 이상의 일정일 때 한줄 처리 */
+.many-events .cal-event-item {
+    -webkit-line-clamp: 1;
+    max-height: 1.2em;
+}
+
 .cal-event-item.repeated { background-color: #fef9c3; }
 .cal-event-item.multi-day { background-color: #dcfce7; border-left: 2px solid #16a34a; }
 
@@ -330,21 +337,37 @@ function renderDayCell(y, m, d, isOther) {
     if(new Date().toDateString() === date.toDateString()) cls += ' today';
     if(dayOfWeek === 0 || (holiday && holiday.red)) cls += ' holiday';
     if(dayOfWeek === 6) cls += ' sat';
+    
     let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
     events.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
 
-    return `<div class="cal-day ${cls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})"><div class="cal-day-num-box"><b style="font-size:13.2px;">${d}</b>${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</div><div class="cal-event-container">${events.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${ev.endDate && ev.endDate !== ev.startDate ? 'multi-day' : ''}">${esc(ev.title)}</div>`).join('')}</div></div>`;
+    /* 2. 일정 3개 제한 로직 */
+    const isMany = events.length >= 4;
+    const displayEvents = isMany ? events : events; // 3개까지가 아니라 4개부터 모든 제목 한줄 처리
+    const cellCls = isMany ? 'many-events' : '';
+
+    return `<div class="cal-day ${cls} ${cellCls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})"><div class="cal-day-num-box"><b style="font-size:13.2px;">${d}</b>${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</div><div class="cal-event-container">${displayEvents.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${ev.endDate && ev.endDate !== ev.startDate ? 'multi-day' : ''}">${esc(ev.title)}</div>`).join('')}</div></div>`;
 }
 
-/* 2. 하루종일 체크를 시간 글자 오른쪽으로 배치 */
+/* 1, 2. 하루종일 체크 위치 및 초기화 문제 해결 */
 function renderCalendarDetail(container) {
     const dateKey = route.date;
     let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
     events.sort((a, b) => (a[1].time || "00:00").localeCompare(b[1].time || "00:00"));
+    
     let editTitle = "", editTime = "12:00", editContent = "", isRepeated = false, editEndDate = dateKey, isAllDay = false, editStartDate = dateKey;
+    
     if(editingCalId && calendarData[dateKey] && calendarData[dateKey][editingCalId]) {
-        const target = calendarData[dateKey][editingCalId]; editTitle = target.title; editTime = target.time || "12:00"; editContent = target.content; isRepeated = target.repeated || false; editEndDate = target.endDate || dateKey; isAllDay = target.isAllDay || false; editStartDate = target.startDate || dateKey;
+        const target = calendarData[dateKey][editingCalId]; 
+        editTitle = target.title; 
+        editTime = target.time || "12:00"; 
+        editContent = target.content; 
+        isRepeated = target.repeated || false; 
+        editEndDate = target.endDate || dateKey; 
+        isAllDay = target.isAllDay || false; // 여기서 수정 페이지의 체크 여부 결정
+        editStartDate = target.startDate || dateKey;
     }
+    
     const isEditingRepeated = editingCalId && isRepeated;
     const titleText = editingCalId ? `${dateKey} 일정 수정` : `${dateKey} 일정 추가`;
     const btnText = editingCalId ? "수정하기" : "추가하기";
@@ -352,9 +375,12 @@ function renderCalendarDetail(container) {
     container.innerHTML = `<div class="card"><h2 style="margin-top:0; font-size: 1.2rem;">${titleText}</h2><label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요" value="${esc(editTitle)}" ${isEditingRepeated ? 'disabled' : ''}>
     <div style="display:flex; gap:10px;"><div style="flex:1;"><label>시작일</label><input type="date" id="calStartDate" value="${editStartDate}" ${isEditingRepeated ? 'disabled' : ''}></div><div style="flex:1;"><label>종료일</label><input type="date" id="calEndDate" value="${editEndDate}" ${isEditingRepeated ? 'disabled' : ''}></div></div>
     
-    <div style="display:flex; align-items:flex-end; gap:15px; margin-top:10px;">
-        <div id="timeInputWrapper" style="flex:1; display: ${isAllDay ? 'none' : 'block'};"><label style="margin-top:0;">시간</label><input id="calTime" type="time" style="margin-top:4px;" value="${editTime}" ${isEditingRepeated ? 'disabled' : ''}></div>
-        <div class="flex-align-center" style="${isAllDay ? 'margin-top:14px;' : 'margin-bottom:12px;'}">
+    <div style="display:flex; align-items:center; gap:15px; margin-top:10px;">
+        <div id="timeInputWrapper" style="flex:1; display: ${isAllDay ? 'none' : 'block'};">
+            <label style="margin-top:0;">시간</label>
+            <input id="calTime" type="time" style="margin-top:4px;" value="${editTime}" ${isEditingRepeated ? 'disabled' : ''}>
+        </div>
+        <div class="flex-align-center" style="margin-top:18px;">
             <input type="checkbox" id="calAllDay" ${isAllDay ? 'checked' : ''} onchange="toggleTimeInput(this.checked)" ${isEditingRepeated ? 'disabled' : ''}>
             <label for="calAllDay">하루종일</label>
         </div>
@@ -368,7 +394,11 @@ function renderCalendarDetail(container) {
     }).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}<button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button></div>`;
 }
 
-function toggleTimeInput(isAllDay) { document.getElementById('timeInputWrapper').style.display = isAllDay ? 'none' : 'block'; render(); }
+/* 2. 하루종일 체크 시 내용 보존을 위해 스타일만 조작 */
+function toggleTimeInput(isAllDay) { 
+    const wrapper = document.getElementById('timeInputWrapper');
+    if(wrapper) wrapper.style.display = isAllDay ? 'none' : 'block';
+}
 
 function setEditCal(id) { 
     const dateKey = route.date;
