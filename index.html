@@ -76,8 +76,9 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
-.cal-day-label { background: #fdfdfd; padding: 5px 0; text-align: center; font-size: 13px; font-weight: bold; }
+/* 1. 요일 행 높이 줄임 (grid-template-rows 추가) */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
+.cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
 
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
 .cal-day.sun { color: red; }
@@ -99,7 +100,8 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.cal-footer { padding: 10px 15px; background: var(--bg); flex-shrink: 0; }
+/* 2. 게시판 돌아가기 버튼이 항상 보이도록 높이 조정 */
+.cal-footer { padding: 10px 15px; background: #fff; flex-shrink: 0; border-top: 1px solid var(--line); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
@@ -273,7 +275,7 @@ function submit(){
   });
 }
 
-/* 캘린더 메인 화면 렌더링 (참고 코드의 스와이프 기능 포함 이식) */
+/* 캘린더 메인 화면 렌더링 */
 function renderCalendarView(container) {
     const currentYear = currentCalDate.getFullYear();
     const currentMonth = currentCalDate.getMonth();
@@ -349,23 +351,22 @@ function renderMonthGrid(dateObj, targetElement) {
             <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
     `;
 
-    // 날짜 렌더링 (이전 달 날짜)
     for(let i = firstDay - 1; i >= 0; i--) {
         const d = prevLastDate - i;
         const dKey = `${month === 0 ? year-1 : year}-${String(month === 0 ? 12 : month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         html += renderDayCell(year, month - 1, d, dKey, true);
     }
     
-    // 현재 달 날짜
     for(let d = 1; d <= lastDate; d++) {
         const dKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         html += renderDayCell(year, month, d, dKey, false);
     }
 
-    // 다음 달 날짜 (6주 고정 렌더링을 위해 이미지처럼 빈 칸 보이지 않게 처리)
+    // 2. 이번달 일자가 없는 행은 보이지 않게 처리 (7일 단위로 끊어서 모자란 칸만 채움)
     const currentCells = firstDay + lastDate;
-    const totalCells = 42; 
-    for(let d = 1; d <= (totalCells - currentCells); d++) {
+    const nextCells = currentCells % 7 === 0 ? 0 : 7 - (currentCells % 7);
+    
+    for(let d = 1; d <= nextCells; d++) {
         const dKey = `${month === 11 ? year+1 : year}-${String(month === 11 ? 1 : month+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         html += renderDayCell(year, month + 1, d, dKey, true);
     }
