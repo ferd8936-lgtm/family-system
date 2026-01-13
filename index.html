@@ -76,12 +76,14 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
-.cal-day-label { background: #fdfdfd; padding: 5px 0; text-align: center; font-size: 13px; font-weight: bold; }
+
+/* 요일 칸 세로 사이즈 수정 */
+.cal-day-label { background: #fdfdfd; padding: 2px 0; text-align: center; font-size: 13px; font-weight: bold; line-height: 1; }
+
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
 .cal-day.sun { color: red; }
 .cal-day.sat { color: blue; }
 .cal-day.other { color: #ccc !important; background: #fafafa; }
-/* 전월/차월 일정 연하게 표시 */
 .cal-day.other .cal-event-item { opacity: 0.4; }
 .cal-day.today { background: #fff; } 
 .today-text { font-size: 8px; color: var(--brand); font-weight: bold; margin-left: 2px; }
@@ -211,11 +213,6 @@ function render(){
     const r = allData.find(x => String(x.id) === String(route.id));
     if(!r) return navigate({page:'list'});
     
-    // 수정 사항 4: 엄마, 아빠 모두 의견 저장 전에는 "부모 의견 입력"으로 문구 변경
-    const isBothInputted = (r.mom !== "pending" && r.dad !== "pending");
-    const parentBtnText = isBothInputted ? "부모 의견 수정" : "부모 의견 입력";
-    
-    // 수정 사항 3: 내용 수정 페이지(parentArea가 채워졌을 때)에는 버튼 안보이게 처리
     const showParentBtn = document.getElementById("parentArea") && document.getElementById("parentArea").innerHTML !== "" ? "none" : "block";
 
     app.innerHTML = `
@@ -224,7 +221,7 @@ function render(){
         <label style="margin-top:0;">제목<button id="btnEditMain" class="small gray" style="width: auto; margin-left: auto;" onclick="toggleEdit('${r.dbId}')">수정</button></label>
         <input id="view-title" disabled value="${esc(r.title)}">
         <label>의견</label><textarea id="view-purpose" class="purpose-box" disabled>${esc(r.purpose)}</textarea>
-        <label>계획</label><textarea id="view-plan" class="plan-box" readonly>${esc(r.plan)}</textarea>
+        <label>계획</label><textarea id="view-plan" class="plan-box" disabled>${esc(r.plan)}</textarea>
         <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
       </div>
       <div class="parent-result"><div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
@@ -232,7 +229,7 @@ function render(){
       </div>
       <div id="parentArea"></div>
       <div id="parentBtnWrapper" style="text-align:center; margin-bottom:10px; display: ${showParentBtn};">
-        <button class="btn-parent-input" onclick="openParent('${r.id}')">${parentBtnText}</button>
+        <button class="btn-parent-input" onclick="openParent('${r.id}')">부모 의견 입력</button>
       </div>
       <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
   }
@@ -277,7 +274,6 @@ function submit(){
   });
 }
 
-// 수정 사항 2: 스와이프 시 이전/다음 달력도 함께 보이도록 구현
 function renderCalendarView(container) {
     const currentYear = currentCalDate.getFullYear();
     const currentMonth = currentCalDate.getMonth();
@@ -353,7 +349,6 @@ function renderMonthGrid(dateObj, targetElement) {
             <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
     `;
 
-    // 수정 사항 1: 전월 날짜 및 일정 연하게 표시 (.other 클래스 활용)
     for(let i = firstDay - 1; i >= 0; i--) {
         const d = prevLastDate - i;
         const dKey = `${month === 0 ? year-1 : year}-${String(month === 0 ? 12 : month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -478,12 +473,14 @@ function toggleEdit(dbId) {
     if(btn.innerText !== "저장") {
         document.getElementById("view-title").disabled = false;
         document.getElementById("view-purpose").disabled = false;
+        document.getElementById("view-plan").disabled = false;
         document.getElementById("view-cost").disabled = false;
         btn.innerText = "저장"; btn.classList.add("green");
     } else {
         const updates = {
             title: document.getElementById("view-title").value.trim(),
             purpose: document.getElementById("view-purpose").value.trim(),
+            plan: document.getElementById("view-plan").value.trim(),
             cost: document.getElementById("view-cost").value.replace(/,/g, '')
         };
         db.ref("approvals/"+dbId).update(updates).then(() => { 
@@ -520,10 +517,13 @@ function authParent(id){
   let h = "";
   const momVal = r.momC || tempParentInput.momC;
   const dadVal = r.dadC || tempParentInput.dadC;
-  h += `<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', true)">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', true)">반대</button></div></div>`;
-  h += `<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', true)">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', true)">반대</button></div></div>`;
   
-  // 수정 사항 3: 내용 수정 페이지가 열리면 버튼 숨김
+  const isMomEdit = r.mom && r.mom !== 'pending';
+  const isDadEdit = r.dad && r.dad !== 'pending';
+
+  h += `<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', ${isMomEdit})">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', ${isMomEdit})">반대</button></div></div>`;
+  h += `<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', ${isDadEdit})">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', ${isDadEdit})">반대</button></div></div>`;
+  
   document.getElementById("parentArea").innerHTML = h;
   document.getElementById("parentBtnWrapper").style.display = "none";
 }
@@ -540,7 +540,7 @@ function decide(dbId, who, val, title, cost, isEdit = false){
     if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
         const whoKo = (who === 'mom' ? '엄마' : '아빠');
-        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo} 의견이 수정되었습니다!` : `[똑똑! 가족게시판]\n${whoKo}의 의견이 등록되었습니다`;
+        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo}의 의견이 수정되었습니다!` : `[똑똑! 가족 게시판]\n${whoKo}의 의견이 등록되었습니다`;
         const m = document.getElementById("pwModal"); m.style.display = "flex";
         m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 처리 완료</b><p style="color:#666; margin-bottom:20px;">가족들에게 문자로 알릴까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
     });
