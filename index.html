@@ -79,12 +79,14 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
 
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
-.cal-day.sun { color: red; }
+.cal-day.sun, .cal-day.holiday { color: red; }
 .cal-day.sat { color: blue; }
 .cal-day.other { color: #ccc !important; background: #fafafa; }
-.cal-day.other .cal-event-item { opacity: 0.4; }
 .cal-day.today { background: #fff; outline: 1px solid #000; outline-offset: -1px; z-index: 1; } 
-.today-text { font-size: 8px; color: var(--brand); font-weight: bold; margin-left: 2px; }
+
+.holiday-text { font-size: 8px; font-weight: normal; margin-left: 2px; vertical-align: top; }
+.holiday-red { color: red; }
+.holiday-black { color: black; }
 
 .cal-event-container { display: flex; flex-direction: column; gap: 1px; width: 100%; overflow: hidden; }
 .cal-event-item { 
@@ -103,14 +105,12 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     word-break: break-all;
     white-space: normal;
 }
-/* 1. 반복 일정 노란색 배경 반영 */
 .cal-event-item.repeated { background-color: #fef9c3; }
+.cal-event-item.multi-day { background-color: #dcfce7; border-left: 2px solid #16a34a; }
 
-/* 3. 반복 일정 팝업 버튼 스타일 */
 .btn-repeat-action { background: #fff !important; color: #000 !important; border: 1px solid var(--line) !important; margin: 4px 0 !important; font-weight: 500 !important; }
 
 .cal-footer { padding: 10px 15px; background: #fff; flex-shrink: 0; border-top: 1px solid var(--line); }
-.stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
 <body>
@@ -135,6 +135,46 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
+
+// 2026-2036 공휴일 데이터
+const holidays = {
+    // 고정 양력 공휴일 (로직에서 처리하기 위해 MM-DD만 등록)
+    "01-01": { name: "신정", red: true },
+    "03-01": { name: "삼일절", red: true },
+    "05-01": { name: "근로자의날", red: false },
+    "05-05": { name: "어린이날", red: true },
+    "05-08": { name: "어버이날", red: false },
+    "06-06": { name: "현충일", red: true },
+    "08-15": { name: "광복절", red: true },
+    "10-01": { name: "국군의날", red: false },
+    "10-03": { name: "개천절", red: true },
+    "10-09": { name: "한글날", red: true },
+    "12-25": { name: "성탄절", red: true },
+
+    // 주요 음력 공휴일 2026-2036 (수동 입력)
+    "2026-02-16": { name: "설날연휴", red: true }, "2026-02-17": { name: "설날", red: true }, "2026-02-18": { name: "설날연휴", red: true },
+    "2026-05-24": { name: "석가탄신일", red: true }, "2026-09-24": { name: "추석연휴", red: true }, "2026-09-25": { name: "추석", red: true }, "2026-09-26": { name: "추석연휴", red: true },
+    "2027-02-06": { name: "설날연휴", red: true }, "2027-02-07": { name: "설날", red: true }, "2027-02-08": { name: "설날연휴", red: true },
+    "2027-05-13": { name: "석가탄신일", red: true }, "2027-09-14": { name: "추석연휴", red: true }, "2027-09-15": { name: "추석", red: true }, "2027-09-16": { name: "추석연휴", red: true },
+    "2028-01-26": { name: "설날연휴", red: true }, "2028-01-27": { name: "설날", red: true }, "2028-01-28": { name: "설날연휴", red: true },
+    "2028-05-02": { name: "석가탄신일", red: true }, "2028-10-02": { name: "추석연휴", red: true }, "2028-10-03": { name: "추석", red: true }, "2028-10-04": { name: "추석연휴", red: true },
+    "2029-02-12": { name: "설날연휴", red: true }, "2029-02-13": { name: "설날", red: true }, "2029-02-14": { name: "설날연휴", red: true },
+    "2029-05-20": { name: "석가탄신일", red: true }, "2029-09-21": { name: "추석연휴", red: true }, "2029-09-22": { name: "추석", red: true }, "2029-09-23": { name: "추석연휴", red: true },
+    "2030-02-02": { name: "설날연휴", red: true }, "2030-02-03": { name: "설날", red: true }, "2030-02-04": { name: "설날연휴", red: true },
+    "2030-05-09": { name: "석가탄신일", red: true }, "2030-09-11": { name: "추석연휴", red: true }, "2030-09-12": { name: "추석", red: true }, "2030-09-13": { name: "추석연휴", red: true },
+    "2031-01-22": { name: "설날연휴", red: true }, "2031-01-23": { name: "설날", red: true }, "2031-01-24": { name: "설날연휴", red: true },
+    "2031-05-28": { name: "석가탄신일", red: true }, "2031-09-30": { name: "추석연휴", red: true }, "2031-10-01": { name: "추석", red: true }, "2031-10-02": { name: "추석연휴", red: true },
+    "2032-02-10": { name: "설날연휴", red: true }, "2032-02-11": { name: "설날", red: true }, "2032-02-12": { name: "설날연휴", red: true },
+    "2032-05-16": { name: "석가탄신일", red: true }, "2032-09-18": { name: "추석연휴", red: true }, "2032-09-19": { name: "추석", red: true }, "2032-09-20": { name: "추석연휴", red: true },
+    "2033-01-30": { name: "설날연휴", red: true }, "2033-01-31": { name: "설날", red: true }, "2033-02-01": { name: "설날연휴", red: true },
+    "2033-05-06": { name: "석가탄신일", red: true }, "2033-09-07": { name: "추석연휴", red: true }, "2033-09-08": { name: "추석", red: true }, "2033-09-09": { name: "추석연휴", red: true },
+    "2034-02-18": { name: "설날연휴", red: true }, "2034-02-19": { name: "설날", red: true }, "2034-02-20": { name: "설날연휴", red: true },
+    "2034-05-25": { name: "석가탄신일", red: true }, "2034-09-26": { name: "추석연휴", red: true }, "2034-09-27": { name: "추석", red: true }, "2034-09-28": { name: "추석연휴", red: true },
+    "2035-02-07": { name: "설날연휴", red: true }, "2035-02-08": { name: "설날", red: true }, "2035-02-09": { name: "설날연휴", red: true },
+    "2035-05-15": { name: "석가탄신일", red: true }, "2035-09-15": { name: "추석연휴", red: true }, "2035-09-16": { name: "추석", red: true }, "2035-09-17": { name: "추석연휴", red: true },
+    "2036-01-27": { name: "설날연휴", red: true }, "2036-01-28": { name: "설날", red: true }, "2036-01-29": { name: "설날연휴", red: true },
+    "2036-05-03": { name: "석가탄신일", red: true }, "2036-10-03": { name: "추석연휴/개천절", red: true }, "2036-10-04": { name: "추석", red: true }, "2036-10-05": { name: "추석연휴", red: true }
+};
 
 let route = { page: "list", id: null, date: null };
 let keyword = "";
@@ -222,9 +262,7 @@ function render(){
   else if(route.page === "view"){
     const r = allData.find(x => String(x.id) === String(route.id));
     if(!r) return navigate({page:'list'});
-    
     const showParentBtn = document.getElementById("parentArea") && document.getElementById("parentArea").innerHTML !== "" ? "none" : "block";
-
     app.innerHTML = `
       <div class="view-time-header">상신: ${r.time}</div>
       <div class="card">
@@ -259,10 +297,8 @@ function getSmsUrl(text) {
 
 function confirmSubmit() {
   const t = document.getElementById("t").value.trim();
-  const p = document.getElementById("p").value.trim();
-  const pl = document.getElementById("pl").value.trim();
   const rawC = document.getElementById("c").value.replace(/,/g, '').trim();
-  if(!t || !p || !pl || !rawC) return alert("모든 칸을 입력해주세요.");
+  if(!t || !rawC) return alert("제목과 비용을 입력해주세요.");
   const m = document.getElementById("pwModal"); m.style.display = "flex";
   m.innerHTML = `<div class="card" style="text-align:center;"><b>의견 상신 확인</b><p style="margin-top:10px;">이대로 의견을 올릴까요?</p><div class="btn-row"><button class="fit" onclick="submit()">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
 }
@@ -273,7 +309,6 @@ function submit(){
   const p = document.getElementById("p").value.trim();
   const pl = document.getElementById("pl").value.trim();
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
-  
   db.ref("approvals").push(newPost).then(() => {
     const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
     const m = document.getElementById("pwModal");
@@ -292,7 +327,6 @@ function submit(){
 function renderCalendarView(container) {
     const currentYear = currentCalDate.getFullYear();
     const currentMonth = currentCalDate.getMonth();
-    
     container.innerHTML = `
         <div class="cal-wrapper">
             <div class="cal-header">
@@ -310,45 +344,20 @@ function renderCalendarView(container) {
             </div>
         </div>
     `;
-
     renderMonthGrid(new Date(currentYear, currentMonth - 1, 1), document.getElementById('prevMonthView'));
     renderMonthGrid(new Date(currentYear, currentMonth, 1), document.getElementById('currMonthView'));
     renderMonthGrid(new Date(currentYear, currentMonth + 1, 1), document.getElementById('nextMonthView'));
-
     const calContainer = document.getElementById('calContainer');
     calContainer.style.transform = 'translateX(-33.333%)';
-
     let startX = 0, currentTranslate = 0, isDragging = false;
-    
-    calContainer.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-        isDragging = true;
-        calContainer.style.transition = 'none';
-    });
-
-    calContainer.addEventListener('touchmove', e => {
-        if (!isDragging) return;
-        const touchX = e.touches[0].clientX;
-        currentTranslate = touchX - startX;
-        const baseTranslate = -window.innerWidth; 
-        calContainer.style.transform = `translateX(${baseTranslate + currentTranslate}px)`;
-    });
-
+    calContainer.addEventListener('touchstart', e => { startX = e.touches[0].clientX; isDragging = true; calContainer.style.transition = 'none'; });
+    calContainer.addEventListener('touchmove', e => { if (!isDragging) return; currentTranslate = e.touches[0].clientX - startX; calContainer.style.transform = `translateX(${-window.innerWidth + currentTranslate}px)`; });
     calContainer.addEventListener('touchend', () => {
-        isDragging = false;
-        calContainer.style.transition = 'transform 0.3s ease-out';
-        const threshold = window.innerWidth / 3;
-        if (Math.abs(currentTranslate) > threshold) {
-            if (currentTranslate > 0) {
-                calContainer.style.transform = 'translateX(0)';
-                setTimeout(() => changeMonth(-1), 300);
-            } else {
-                calContainer.style.transform = 'translateX(-66.666%)';
-                setTimeout(() => changeMonth(1), 300);
-            }
-        } else {
-            calContainer.style.transform = 'translateX(-33.333%)';
-        }
+        isDragging = false; calContainer.style.transition = 'transform 0.3s ease-out';
+        if (Math.abs(currentTranslate) > window.innerWidth / 3) {
+            if (currentTranslate > 0) { calContainer.style.transform = 'translateX(0)'; setTimeout(() => changeMonth(-1), 300); }
+            else { calContainer.style.transform = 'translateX(-66.666%)'; setTimeout(() => changeMonth(1), 300); }
+        } else { calContainer.style.transform = 'translateX(-33.333%)'; }
         currentTranslate = 0;
     });
 }
@@ -359,53 +368,40 @@ function renderMonthGrid(dateObj, targetElement) {
     const firstDay = new Date(year, month, 1).getDay();
     const lastDate = new Date(year, month + 1, 0).getDate();
     const prevLastDate = new Date(year, month, 0).getDate();
-    
-    let html = `
-        <div class="cal-grid">
-            <div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div>
-            <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
-    `;
-
-    for(let i = firstDay - 1; i >= 0; i--) {
-        const d = prevLastDate - i;
-        const dKey = `${month === 0 ? year-1 : year}-${String(month === 0 ? 12 : month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        html += renderDayCell(year, month - 1, d, dKey, true);
-    }
-    
-    for(let d = 1; d <= lastDate; d++) {
-        const dKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        html += renderDayCell(year, month, d, dKey, false);
-    }
-
-    const currentCells = firstDay + lastDate;
-    const nextCells = 42 - currentCells;
-    
-    for(let d = 1; d <= nextCells; d++) {
-        const dKey = `${month === 11 ? year+1 : year}-${String(month === 11 ? 1 : month+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        html += renderDayCell(year, month + 1, d, dKey, true);
-    }
-    
+    let html = `<div class="cal-grid"><div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div><div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>`;
+    for(let i = firstDay - 1; i >= 0; i--) { html += renderDayCell(year, month - 1, prevLastDate - i, true); }
+    for(let d = 1; d <= lastDate; d++) { html += renderDayCell(year, month, d, false); }
+    const nextCells = 42 - (firstDay + lastDate);
+    for(let d = 1; d <= nextCells; d++) { html += renderDayCell(year, month + 1, d, true); }
     html += `</div>`;
     targetElement.innerHTML = html;
 }
 
-function renderDayCell(y, m, d, dateKey, isOther) {
+function renderDayCell(y, m, d, isOther) {
     const date = new Date(y, m, d);
+    const dateKey = date.toISOString().split('T')[0];
+    const shortDateKey = dateKey.substring(5); // MM-DD
     const isToday = new Date().toDateString() === date.toDateString();
-    let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
-    events.sort((a, b) => a.time.localeCompare(b.time));
     
+    // 공휴일 체크 (양력 고정 + 수동 음력)
+    const holiday = holidays[dateKey] || holidays[shortDateKey];
     const dayOfWeek = date.getDay();
     let cls = isOther ? 'other' : '';
     if(isToday) cls += ' today';
-    if(dayOfWeek === 0) cls += ' sun'; 
+    if(dayOfWeek === 0 || (holiday && holiday.red)) cls += ' holiday';
     if(dayOfWeek === 6) cls += ' sat';
+
+    let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
+    events.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 
     return `
         <div class="cal-day ${cls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})">
-            <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
+            <b>${d}${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</b>
             <div class="cal-event-container">
-                ${events.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''}">${esc(ev.title)}</div>`).join('')}
+                ${events.map(ev => {
+                    const multiCls = ev.endDate && ev.endDate !== ev.startDate ? 'multi-day' : '';
+                    return `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${multiCls}">${esc(ev.title)}</div>`
+                }).join('')}
             </div>
         </div>`;
 }
@@ -413,15 +409,16 @@ function renderDayCell(y, m, d, dateKey, isOther) {
 function renderCalendarDetail(container) {
     const dateKey = route.date;
     let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
-    events.sort((a, b) => a[1].time.localeCompare(b[1].time));
+    events.sort((a, b) => (a[1].time || "").localeCompare(b[1].time || ""));
     
-    let editTitle = "", editTime = "12:00", editContent = "", isRepeated = false;
+    let editTitle = "", editTime = "12:00", editContent = "", isRepeated = false, editEndDate = dateKey;
     if(editingCalId && calendarData[dateKey] && calendarData[dateKey][editingCalId]) {
         const target = calendarData[dateKey][editingCalId];
         editTitle = target.title;
-        editTime = target.time;
+        editTime = target.time || "12:00";
         editContent = target.content;
         isRepeated = target.repeated || false;
+        editEndDate = target.endDate || dateKey;
     }
 
     const titleText = editingCalId ? `${dateKey} 일정 수정` : `${dateKey} 일정 추가`;
@@ -431,46 +428,40 @@ function renderCalendarDetail(container) {
         <div class="card">
             <h2 style="margin-top:0; font-size: 1.2rem;">${titleText}</h2>
             <label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요" value="${esc(editTitle)}">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>시작일</label><input type="date" id="calStartDate" value="${dateKey}" disabled></div>
+                <div style="flex:1;"><label>종료일</label><input type="date" id="calEndDate" value="${editEndDate}"></div>
+            </div>
             <label>시간</label><input id="calTime" type="time" value="${editTime}">
             <label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요">${esc(editContent)}</textarea>
             <label style="justify-content: flex-start; gap:10px;">
-                <input type="checkbox" id="calRepeat" style="width:20px; height:20px; margin:0;" ${isRepeated ? 'checked' : ''} ${editingCalId ? 'disabled' : ''}> 매월 같은 날에 일정 반영
+                <input type="checkbox" id="calRepeat" style="width:20px; height:20px; margin:0;" ${isRepeated ? 'checked' : ''}> 매월 같은 날에 일정 반영
             </label>
             <button onclick="saveCal('${dateKey}')">${btnText}</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--line);">
             <b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>
             ${events.map(([id, ev]) => `
-                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap: nowrap;" 
+                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;" 
                      onclick="setEditCal('${id}')">
-                    <div style="overflow:hidden; flex:1; margin-right:10px;">
+                    <div style="flex:1; margin-right:10px;">
                         <small style="color:var(--brand); font-weight:bold;">${ev.time || ''} ${ev.repeated ? '(매월)' : ''}</small><br>
-                        <b style="font-size:14px;">${esc(ev.title || '')}</b><br>
-                        <span style="font-size:13px; color:#666;">${esc(ev.content || '')}</span>
+                        <b style="font-size:14px;">${esc(ev.title || '')}</b>
                     </div>
-                    <button class="small red" style="width:50px; flex-shrink:0; height:30px;" onclick="event.stopPropagation(); askDeleteCalMode('${dateKey}', '${id}', ${ev.repeated || false}, '${ev.repeatId || ''}')">삭제</button>
+                    <button class="small red" style="width:50px;" onclick="event.stopPropagation(); askDeleteCalMode('${dateKey}', '${id}', ${ev.repeated || false}, '${ev.repeatId || ''}')">삭제</button>
                 </div>
             `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
             <button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button>
         </div>`;
 }
 
-function setEditCal(id) {
-    editingCalId = id;
-    render();
-}
+function setEditCal(id) { editingCalId = id; render(); }
 
-// 3, 4. 삭제 팝업 스타일 및 로직 수정
 function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
+    const m = document.getElementById("pwModal"); m.style.display = "flex";
     if (!isRepeated) {
-        m.innerHTML = `<div class="card" style="text-align:center;">
-            <b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p>
-            <div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button>
-            <button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
+        m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button><button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
     } else {
-        m.innerHTML = `<div class="card" style="text-align:center;">
-            <b>반복 일정 삭제</b><p style="margin:10px 0; font-size:14px; color:#666;">삭제 범위를 선택해주세요.</p>
+        m.innerHTML = `<div class="card" style="text-align:center;"><b>반복 일정 삭제</b><p style="margin:10px 0; font-size:14px; color:#666;">삭제 범위를 선택해주세요.</p>
             <button class="btn-repeat-action" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button>
             <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 반복 삭제</button>
             <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 반복 일정 삭제</button>
@@ -478,19 +469,24 @@ function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     }
 }
 
-function closeModal() { document.getElementById("pwModal").style.display = "none"; }
-
-function doDeleteCal(dateKey, id) {
-    db.ref(`calendar_v3/${dateKey}/${id}`).remove().then(() => { closeModal(); editingCalId = null; render(); });
+function askEditRepeatMode(dateKey, id, repeatId, newData) {
+    const m = document.getElementById("pwModal"); m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>반복 일정 수정</b><p style="margin:10px 0; font-size:14px; color:#666;">수정 범위를 선택해주세요.</p>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'one')">이 일정만 수정</button>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'after')">이 일정과 이후 모든 반복 수정</button>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'all')">연관된 모든 반복 일정 수정</button>
+        <button class="gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
 }
+
+function closeModal() { document.getElementById("pwModal").style.display = "none"; }
+function doDeleteCal(dateKey, id) { db.ref(`calendar_v3/${dateKey}/${id}`).remove().then(() => { closeModal(); editingCalId = null; render(); }); }
 
 function doDeleteRepeatRange(dateKey, repeatId, mode) {
     const targetDate = new Date(dateKey);
     const updates = {};
     Object.keys(calendarData).forEach(dKey => {
-        const dayEvents = calendarData[dKey];
-        Object.keys(dayEvents).forEach(eId => {
-            const ev = dayEvents[eId];
+        Object.keys(calendarData[dKey]).forEach(eId => {
+            const ev = calendarData[dKey][eId];
             if (ev.repeatId === repeatId) {
                 if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = null;
                 else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = null;
@@ -500,28 +496,14 @@ function doDeleteRepeatRange(dateKey, repeatId, mode) {
     db.ref().update(updates).then(() => { closeModal(); editingCalId = null; render(); });
 }
 
-// 5. 반복 일정 수정 팝업 및 로직
-function askEditRepeatMode(dateKey, id, repeatId, newData) {
-    const m = document.getElementById("pwModal");
-    m.style.display = "flex";
-    m.innerHTML = `<div class="card" style="text-align:center;">
-        <b>반복 일정 수정</b><p style="margin:10px 0; font-size:14px; color:#666;">수정 범위를 선택해주세요.</p>
-        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'one')">이 일정만 수정</button>
-        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'after')">이 일정과 이후 모든 반복 수정</button>
-        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'all')">연관된 모든 반복 일정 수정</button>
-        <button class="gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
-}
-
 function doUpdateRepeat(dateKey, id, repeatId, data, mode) {
     const targetDate = new Date(dateKey);
     const updates = {};
-    if (mode === 'one') {
-        updates[`calendar_v3/${dateKey}/${id}`] = data;
-    } else {
+    if (mode === 'one') updates[`calendar_v3/${dateKey}/${id}`] = data;
+    else {
         Object.keys(calendarData).forEach(dKey => {
-            const dayEvents = calendarData[dKey];
-            Object.keys(dayEvents).forEach(eId => {
-                const ev = dayEvents[eId];
+            Object.keys(calendarData[dKey]).forEach(eId => {
+                const ev = calendarData[dKey][eId];
                 if (ev.repeatId === repeatId) {
                     if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = data;
                     else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = data;
@@ -537,50 +519,51 @@ function saveCal(dateKey) {
     const time = document.getElementById("calTime").value;
     const content = document.getElementById("calContent").value.trim();
     const repeat = document.getElementById("calRepeat").checked;
+    const endDate = document.getElementById("calEndDate").value;
     
     if(!title) return alert("제목을 입력해주세요.");
-    
-    const data = { title, time, content, repeated: repeat };
+    const data = { title, time, content, repeated: repeat, startDate: dateKey, endDate };
 
     if (editingCalId) {
         const currentEv = calendarData[dateKey][editingCalId];
-        if (currentEv.repeated) {
-            askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data);
-            return;
-        }
+        if (currentEv.repeated) { askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data); return; }
         db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { editingCalId = null; render(); });
     } else {
-        if(repeat) {
-            const repeatId = "rep_" + Date.now();
-            const baseDate = new Date(dateKey);
-            const updates = {};
-            for(let i=0; i<12; i++) {
-                let next = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
-                if(next.getDate() !== baseDate.getDate()) continue; 
-                const nextKey = next.toISOString().split('T')[0];
-                const newRef = db.ref("calendar_v3/" + nextKey).push();
-                updates[`calendar_v3/${nextKey}/${newRef.key}`] = { ...data, repeatId };
-            }
-            db.ref().update(updates).then(() => { editingCalId = null; render(); });
-        } else {
-            db.ref("calendar_v3/" + dateKey).push(data).then(() => { render(); });
+        const updates = {};
+        const repeatId = repeat ? "rep_" + Date.now() : "single_" + Date.now();
+        
+        let start = new Date(dateKey);
+        let end = new Date(endDate);
+        while(start <= end) {
+            const dStr = start.toISOString().split('T')[0];
+            const newRef = db.ref("calendar_v3/" + dStr).push();
+            updates[`calendar_v3/${dStr}/${newRef.key}`] = { ...data, repeatId };
+            start.setDate(start.getDate() + 1);
         }
+
+        if (repeat) {
+            for(let i=1; i<12; i++) {
+                let mStart = new Date(dateKey); mStart.setMonth(mStart.getMonth() + i);
+                let mEnd = new Date(endDate); mEnd.setMonth(mEnd.getMonth() + i);
+                if (mStart.getDate() !== new Date(dateKey).getDate()) continue;
+                let cur = new Date(mStart);
+                while(cur <= mEnd) {
+                    const dStr = cur.toISOString().split('T')[0];
+                    const newRef = db.ref("calendar_v3/" + dStr).push();
+                    updates[`calendar_v3/${dStr}/${newRef.key}`] = { ...data, repeatId };
+                    cur.setDate(cur.getDate() + 1);
+                }
+            }
+        }
+        db.ref().update(updates).then(() => { editingCalId = null; render(); });
     }
 }
 
-function changeMonth(diff) {
-    currentCalDate.setMonth(currentCalDate.getMonth() + diff);
-    render();
-}
-
+function changeMonth(diff) { currentCalDate.setMonth(currentCalDate.getMonth() + diff); render(); }
 function now(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
 function formatComma(v){ return String(v).replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 function esc(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-function getStatus(r){
-  const mom = r.mom || "pending"; const dad = r.dad || "pending";
-  if(mom === "pending" || dad === "pending") return "대기";
-  return (mom === "approve" && dad === "approve") ? "찬성" : "반대";
-}
+function getStatus(r){ const mom = r.mom || "pending"; const dad = r.dad || "pending"; if(mom === "pending" || dad === "pending") return "대기"; return (mom === "approve" && dad === "approve") ? "찬성" : "반대"; }
 function badge(s){ return `<span class="badge ${s==='찬성'?'ok':(s==='반대'?'no':'wait')}">${s}</span>`; }
 function transKo(v){ return v === "approve" ? "찬성" : (v === "reject" ? "반대" : "대기"); }
 function renderLog(name, res, comm, time) {
@@ -591,120 +574,63 @@ function renderLog(name, res, comm, time) {
 function toggleEdit(dbId) {
     const btn = document.getElementById("btnEditMain");
     if(btn.innerText !== "저장") {
-        document.getElementById("view-title").disabled = false;
-        document.getElementById("view-purpose").disabled = false;
-        document.getElementById("view-plan").disabled = false;
-        document.getElementById("view-cost").disabled = false;
+        ["view-title", "view-purpose", "view-plan", "view-cost"].forEach(id => document.getElementById(id).disabled = false);
         btn.innerText = "저장"; btn.classList.add("green");
     } else {
-        const updates = {
-            title: document.getElementById("view-title").value.trim(),
-            purpose: document.getElementById("view-purpose").value.trim(),
-            plan: document.getElementById("view-plan").value.trim(),
-            cost: document.getElementById("view-cost").value.replace(/,/g, '')
-        };
-        db.ref("approvals/"+dbId).update(updates).then(() => { 
-            const msg = `[똑똑! 가족 게시판]\n아이의 의견이 수정되었습니다!`;
-            const m = document.getElementById("pwModal");
-            m.style.display = "flex";
-            m.innerHTML = `<div class="card" style="text-align:center;">
-                <b style="font-size:18px; display:block; margin-bottom:10px;">✅ 수정 완료</b>
-                <p style="color:#666; margin-bottom:20px;">수정 사실을 가족들에게 알릴까요?</p>
-                <div class="btn-row">
-                  <a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; render();">문자 보내기</a>
-                  <button class="gray" onclick="document.getElementById('pwModal').style.display='none'; render();">그냥 닫기</button>
-                </div>
-              </div>`;
-        });
+        const updates = { title: document.getElementById("view-title").value.trim(), purpose: document.getElementById("view-purpose").value.trim(), plan: document.getElementById("view-plan").value.trim(), cost: document.getElementById("view-cost").value.replace(/,/g, '') };
+        db.ref("approvals/"+dbId).update(updates).then(() => { render(); });
     }
 }
 
 function askDelete(dbId){
   const m = document.getElementById("pwModal"); m.style.display="flex";
-  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="closeModal()">닫기</button></div></div>`;
 }
-function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); document.getElementById("pwModal").style.display="none"; }); } else { alert("비밀번호가 틀렸습니다."); } }
+function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); closeModal(); }); } else { alert("비밀번호가 틀렸습니다."); } }
 
 function openParent(id){
   const m = document.getElementById("pwModal"); m.style.display="flex";
-  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="closeModal()">닫기</button></div></div>`;
 }
 
 function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
-  document.getElementById("pwModal").style.display="none";
+  closeModal();
   const r = allData.find(x=>String(x.id)===String(id)); 
-  
   const logArea = document.getElementById("parentViewLog");
   if(logArea) logArea.style.display = "none";
-
   let h = "";
-  const momVal = r.momC || tempParentInput.momC;
-  const dadVal = r.dadC || tempParentInput.dadC;
-  
-  const isMomEdit = r.mom && r.mom !== 'pending';
-  const isDadEdit = r.dad && r.dad !== 'pending';
-
-  const momIcon = r.mom === 'approve' ? '✅ 찬성' : (r.mom === 'reject' ? '❌ 반대' : '⏳ 대기');
-  const dadIcon = r.dad === 'approve' ? '✅ 찬성' : (r.dad === 'reject' ? '❌ 반대' : '⏳ 대기');
-
-  h += `<div class="card">
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
-            <b>엄마 의견</b>
-            <span style="color:#666;">${momIcon} ${r.momTime ? '('+r.momTime+')' : ''}</span>
-          </div>
-          <textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea>
-          <div style="text-align:left; margin-top:10px;">
-            <button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', ${isMomEdit})">찬성</button>
-            <button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', ${isMomEdit})">반대</button>
-          </div>
-        </div>`;
-        
-  h += `<div class="card">
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
-            <b>아빠 의견</b>
-            <span style="color:#666;">${dadIcon} ${r.dadTime ? '('+r.dadTime+')' : ''}</span>
-          </div>
-          <textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea>
-          <div style="text-align:left; margin-top:10px;">
-            <button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', ${isDadEdit})">찬성</button>
-            <button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', ${isDadEdit})">반대</button>
-          </div>
-        </div>`;
-  
+  ['mom', 'dad'].forEach(who => {
+      const whoKo = who === 'mom' ? '엄마' : '아빠';
+      const res = r[who];
+      const icon = res === 'approve' ? '✅ 찬성' : (res === 'reject' ? '❌ 반대' : '⏳ 대기');
+      h += `<div class="card"><b>${whoKo} 의견</b> <span style="color:#666;">${icon}</span><textarea id="${who}C" rows="3">${r[who+'C'] || ''}</textarea>
+            <div style="margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','${who}','approve','${r.title}', '${r.cost}')">찬성</button>
+            <button class="fit red" onclick="confirmDecide('${r.dbId}','${who}','reject','${r.title}', '${r.cost}')">반대</button></div></div>`;
+  });
   document.getElementById("parentArea").innerHTML = h;
   document.getElementById("parentBtnWrapper").style.display = "none";
 }
 
-function confirmDecide(dbId, who, val, title, cost, isEdit = false) {
-    const comment = document.getElementById(who + "C").value.trim();
-    if (!comment) return alert("의견을 반드시 입력해야 합니다.");
+function confirmDecide(dbId, who, val, title, cost) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
-    m.innerHTML = `<div class="card" style="text-align:center;"><b>의견 등록 확인</b><p style="margin-top:10px;">의견을 ${isEdit ? '수정' : '등록'}하시겠습니까?</p><div class="btn-row"><button class="fit" onclick="decide('${dbId}','${who}','${val}','${title}', '${cost}', ${isEdit})">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">취소</button></div></div>`;
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>의견 등록</b><div class="btn-row"><button class="fit" onclick="decide('${dbId}','${who}','${val}')">확인</button><button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
 }
 
-function decide(dbId, who, val, title, cost, isEdit = false){
+function decide(dbId, who, val){
     const comment = document.getElementById(who+"C").value;
-    if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
-    db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
-        const whoKo = (who === 'mom' ? '엄마' : '아빠');
-        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo}의 의견이 수정되었습니다!` : `[똑똑! 가족 게시판]\n${whoKo}의 의견이 등록되었습니다!`;
-        const m = document.getElementById("pwModal"); m.style.display = "flex";
-        m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 처리 완료</b><p style="color:#666; margin-bottom:20px;">가족들에게 문자로 알릴까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
-    });
+    db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => { navigate({page:'list'}); closeModal(); });
 }
 
 function doSearch(){ keyword = document.getElementById("q").value.trim(); render(); }
 function openStats(){
   const stats = {}; allData.filter(x => getStatus(x) !== "대기").forEach(item => { const key = item.time.substring(0,7).replace("-","년 ") + "월"; if(!stats[key]) stats[key] = {app:0, appS:0, rej:0, rejS:0}; const s = getStatus(item), c = Number(item.cost); if(s==="찬성"){ stats[key].app++; stats[key].appS+=c; } else { stats[key].rej++; stats[key].rejS+=c; } });
   const sorted = Object.keys(stats).sort().reverse(), m = document.getElementById("statModal"); m.style.display="flex";
-  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="document.getElementById('statModal').style.display='none'">닫기</button></div>`;
+  m.innerHTML = `<div class="card"><h3>월간 통계</h3><div class="table-wrapper">${sorted.map(k=>`<div class="stat-item"><b>${k}</b><br>✅ 찬성: ${stats[k].app}건 (${stats[k].appS.toLocaleString()}원) <br>❌ 반대: ${stats[k].rej}건 (${stats[k].rejS.toLocaleString()}원)</div>`).join("")}</div><button onclick="closeModalStat()">닫기</button></div>`;
 }
+function closeModalStat() { document.getElementById("statModal").style.display="none"; }
 
-window.onpopstate = (e) => { 
-  if(e.state) { route = e.state; render(); } 
-  else { window.history.back(); } 
-};
+window.onpopstate = (e) => { if(e.state) { route = e.state; render(); } else { window.history.back(); } };
 history.replaceState({page:'list'}, "");
 </script>
 </body>
