@@ -76,7 +76,6 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 
-/* 1. 요일 행 높이 줄임 (grid-template-rows 추가) */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
 .cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
 
@@ -88,7 +87,8 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-day.today { background: #fff; } 
 .today-text { font-size: 8px; color: var(--brand); font-weight: bold; margin-left: 2px; }
 
-.cal-event-container { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+/* 5. 일정이 가로 2줄까지 보이도록 수정 */
+.cal-event-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; }
 .cal-event-item { 
     color: #000; 
     background-color: #eef2ff; 
@@ -100,7 +100,6 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     overflow: hidden;
     text-overflow: ellipsis;
 }
-/* 2. 게시판 돌아가기 버튼이 항상 보이도록 높이 조정 */
 .cal-footer { padding: 10px 15px; background: #fff; flex-shrink: 0; border-top: 1px solid var(--line); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
@@ -134,6 +133,7 @@ let allData = [];
 let calendarData = {};
 let currentCalDate = new Date();
 let tempParentInput = { momC: "", dadC: "" };
+let editingCalId = null; // 캘린더 수정 모드 관리용
 
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
@@ -234,8 +234,13 @@ function render(){
       </div>
       <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
   }
-  else if(route.page === "calendar"){ document.body.classList.add("full-view"); renderCalendarView(app); }
-  else if(route.page === "calDetail"){ renderCalendarDetail(app); }
+  else if(route.page === "calendar"){ 
+    document.body.classList.add("full-view"); 
+    renderCalendarView(app); 
+  }
+  else if(route.page === "calDetail"){ 
+    renderCalendarDetail(app); 
+  }
 }
 
 function getSmsUrl(text) {
@@ -280,6 +285,7 @@ function renderCalendarView(container) {
     const currentYear = currentCalDate.getFullYear();
     const currentMonth = currentCalDate.getMonth();
     
+    // 1. 게시판 돌아가기 버튼이 포함된 구조로 유지
     container.innerHTML = `
         <div class="cal-wrapper">
             <div class="cal-header">
@@ -292,7 +298,9 @@ function renderCalendarView(container) {
                 <div class="cal-month-view" id="currMonthView"></div>
                 <div class="cal-month-view" id="nextMonthView"></div>
             </div>
-            <div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div>
+            <div class="cal-footer">
+                <button class="gray" onclick="editingCalId=null; navigate({page:'list'})">게시판으로 돌아가기</button>
+            </div>
         </div>
     `;
 
@@ -351,6 +359,7 @@ function renderMonthGrid(dateObj, targetElement) {
             <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
     `;
 
+    // 2. 여백 회색 부분 없이 다음 달 일자가 보이도록 6행(42칸) 고정 렌더링
     for(let i = firstDay - 1; i >= 0; i--) {
         const d = prevLastDate - i;
         const dKey = `${month === 0 ? year-1 : year}-${String(month === 0 ? 12 : month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -362,9 +371,8 @@ function renderMonthGrid(dateObj, targetElement) {
         html += renderDayCell(year, month, d, dKey, false);
     }
 
-    // 2. 이번달 일자가 없는 행은 보이지 않게 처리 (7일 단위로 끊어서 모자란 칸만 채움)
     const currentCells = firstDay + lastDate;
-    const nextCells = currentCells % 7 === 0 ? 0 : 7 - (currentCells % 7);
+    const nextCells = 42 - currentCells; // 고정 42칸
     
     for(let d = 1; d <= nextCells; d++) {
         const dKey = `${month === 11 ? year+1 : year}-${String(month === 11 ? 1 : month+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -388,40 +396,62 @@ function renderDayCell(y, m, d, dateKey, isOther) {
     if(dayOfWeek === 6) cls += ' sat';
 
     return `
-        <div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})">
+        <div class="cal-day ${cls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})">
             <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
             <div class="cal-event-container">
-                ${events.map(ev => `<div class="cal-event-item">${esc(ev.title)} ${ev.time}</div>`).join('')}
+                ${events.map(ev => `<div class="cal-event-item">${esc(ev.title)}</div>`).join('')}
             </div>
         </div>`;
 }
 
+// 3. 캘린더 상세 화면 (수정 모드 반영 및 반복 기능 추가)
 function renderCalendarDetail(container) {
     const dateKey = route.date;
     let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
     events.sort((a, b) => a[1].time.localeCompare(b[1].time));
     
+    // 수정 데이터가 있는 경우 가져오기
+    let editTitle = "", editTime = "12:00", editContent = "";
+    if(editingCalId && calendarData[dateKey] && calendarData[dateKey][editingCalId]) {
+        const target = calendarData[dateKey][editingCalId];
+        editTitle = target.title;
+        editTime = target.time;
+        editContent = target.content;
+    }
+
+    const titleText = editingCalId ? `${dateKey} 일정 수정` : `${dateKey} 일정 추가`;
+    const btnText = editingCalId ? "일정 수정하기" : "일정 추가하기";
+    
     container.innerHTML = `
         <div class="card">
-            <h2 style="margin-top:0; font-size: 1.2rem;">${dateKey} 일정 추가</h2>
-            <label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요">
-            <label>시간</label><input id="calTime" type="time" value="12:00">
-            <label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요"></textarea>
-            <button onclick="saveCal('${dateKey}')">일정 추가하기</button>
+            <h2 style="margin-top:0; font-size: 1.2rem;">${titleText}</h2>
+            <label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요" value="${esc(editTitle)}">
+            <label>시간</label><input id="calTime" type="time" value="${editTime}">
+            <label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요">${esc(editContent)}</textarea>
+            <label style="justify-content: flex-start; gap:10px;">
+                <input type="checkbox" id="calRepeat" style="width:20px; height:20px; margin:0;"> 매월 같은 날에 일정 반영
+            </label>
+            <button onclick="saveCal('${dateKey}')">${btnText}</button>
             <hr style="margin:20px 0; border:0; border-top:1px solid var(--line);">
             <b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>
             ${events.map(([id, ev]) => `
-                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap: nowrap;">
+                <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap: nowrap;" 
+                     onclick="setEditCal('${id}')">
                     <div style="overflow:hidden; flex:1; margin-right:10px;">
                         <small style="color:var(--brand); font-weight:bold;">${ev.time || ''}</small><br>
                         <b style="font-size:14px;">${esc(ev.title || '')}</b><br>
                         <span style="font-size:13px; color:#666;">${esc(ev.content || '')}</span>
                     </div>
-                    <button class="small red" style="width:50px; flex-shrink:0; height:30px;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button>
+                    <button class="small red" style="width:50px; flex-shrink:0; height:30px;" onclick="event.stopPropagation(); askDeleteCal('${dateKey}', '${id}')">삭제</button>
                 </div>
             `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
-            <button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button>
+            <button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button>
         </div>`;
+}
+
+function setEditCal(id) {
+    editingCalId = id;
+    render();
 }
 
 function askDeleteCal(dateKey, id) {
@@ -440,6 +470,7 @@ function askDeleteCal(dateKey, id) {
 function doDeleteCal(dateKey, id) {
     db.ref(`calendar_v3/${dateKey}/${id}`).remove().then(() => {
         document.getElementById("pwModal").style.display = "none";
+        editingCalId = null;
         render();
     });
 }
@@ -448,8 +479,39 @@ function saveCal(dateKey) {
     const title = document.getElementById("calTitle").value.trim();
     const time = document.getElementById("calTime").value;
     const content = document.getElementById("calContent").value.trim();
+    const repeat = document.getElementById("calRepeat").checked;
+    
     if(!title) return alert("제목을 입력해주세요.");
-    db.ref("calendar_v3/" + dateKey).push({ title, time, content }).then(() => { render(); });
+    
+    const data = { title, time, content };
+
+    // 4. 기능: 매월 반복 및 수정/추가 처리
+    if(repeat) {
+        // 현재 날짜로부터 12개월간 동일 날짜에 추가 (수정 시에도 반복 설정하면 새 일정들로 등록)
+        const baseDate = new Date(dateKey);
+        const promises = [];
+        for(let i=0; i<12; i++) {
+            let next = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
+            // 날짜가 달라지는 경우(예: 1월 31일의 다음달) 방지
+            if(next.getDate() !== baseDate.getDate()) continue; 
+            
+            const nextKey = next.toISOString().split('T')[0];
+            promises.push(db.ref("calendar_v3/" + nextKey).push(data));
+        }
+        Promise.all(promises).then(() => { 
+            editingCalId = null;
+            render(); 
+        });
+    } else {
+        if(editingCalId) {
+            db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { 
+                editingCalId = null;
+                render(); 
+            });
+        } else {
+            db.ref("calendar_v3/" + dateKey).push(data).then(() => { render(); });
+        }
+    }
 }
 
 function changeMonth(diff) {
