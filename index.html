@@ -68,17 +68,17 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-/* 2. 캘린더 메인 화면 비율 최적화 */
-.cal-wrapper { background: #fff; height: 100%; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
-.cal-container { display: flex; width: 300%; height: 100%; transition: transform 0.3s ease-out; }
+/* 캘린더 메인 화면 한 화면에 보이도록 최적화 */
+.cal-wrapper { background: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
+.cal-container { display: flex; width: 300%; flex: 1; transition: transform 0.3s ease-out; }
 .cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
 
-.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); }
+.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; width: 100%; }
 
-/* 요일 칸 세로 사이즈 및 가운데 정렬 수정 */
-.cal-day-label { background: #fdfdfd; height: 18px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; line-height: 1; }
+/* 요일 칸 디자인 수정 - 하단 경계선 및 여백 제거 */
+.cal-day-label { background: #fdfdfd; height: 22px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; line-height: 1; border-bottom: none; }
 
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
 .cal-day.sun { color: red; }
@@ -100,7 +100,8 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.cal-footer { padding: 10px 15px; background: var(--bg); }
+/* 하단 버튼 영역 한 화면 보기에 고정 */
+.cal-footer { padding: 10px 15px; background: var(--bg); flex-shrink: 0; border-top: 1px solid var(--line); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
@@ -260,7 +261,7 @@ function submit(){
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다\n\n제목 : ${t}\n금액 : ${Number(rawC).toLocaleString()}원`;
+    const msg = `[똑똑! 가족게시판]\n아이의 의견이 접수되었습니다!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;">
@@ -515,7 +516,6 @@ function authParent(id){
   document.getElementById("pwModal").style.display="none";
   const r = allData.find(x=>String(x.id)===String(id)); 
   
-  // 수정 사항 2: 입력 페이지 진입 시 기존 로그 숨김
   const logArea = document.getElementById("parentViewLog");
   if(logArea) logArea.style.display = "none";
 
@@ -526,7 +526,6 @@ function authParent(id){
   const isMomEdit = r.mom && r.mom !== 'pending';
   const isDadEdit = r.dad && r.dad !== 'pending';
 
-  // 수정 사항 2: 입력칸 위에 기존 기록 요약 표시
   const momIcon = r.mom === 'approve' ? '✅ 찬성' : (r.mom === 'reject' ? '❌ 반대' : '⏳ 대기');
   const dadIcon = r.dad === 'approve' ? '✅ 찬성' : (r.dad === 'reject' ? '❌ 반대' : '⏳ 대기');
 
@@ -570,7 +569,7 @@ function decide(dbId, who, val, title, cost, isEdit = false){
     if(who === 'mom') tempParentInput.momC = ""; else tempParentInput.dadC = "";
     db.ref("approvals/"+dbId).update({ [who]: val, [who+"C"]: comment, [who+"Time"]: now() }).then(() => {
         const whoKo = (who === 'mom' ? '엄마' : '아빠');
-        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo}의 의견이 수정되었습니다!` : `[똑똑! 가족 게시판]\n${whoKo}의 의견이 등록되었습니다`;
+        const msg = isEdit ? `[똑똑! 가족 게시판]\n${whoKo}의 의견이 수정되었습니다!` : `[똑똑! 가족 게시판]\n${whoKo}의 의견이 등록되었습니다!`;
         const m = document.getElementById("pwModal"); m.style.display = "flex";
         m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 처리 완료</b><p style="color:#666; margin-bottom:20px;">가족들에게 문자로 알릴까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
     });
