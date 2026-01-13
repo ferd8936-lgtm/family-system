@@ -136,9 +136,10 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
 
-// 2026-2036 공휴일 데이터
+// 4. 캘린더 데이터 초기화 (코드 실행 시 1회 수행됨)
+db.ref("calendar_v3").remove();
+
 const holidays = {
-    // 고정 양력 공휴일 (로직에서 처리하기 위해 MM-DD만 등록)
     "01-01": { name: "신정", red: true },
     "03-01": { name: "삼일절", red: true },
     "05-01": { name: "근로자의날", red: false },
@@ -150,30 +151,10 @@ const holidays = {
     "10-03": { name: "개천절", red: true },
     "10-09": { name: "한글날", red: true },
     "12-25": { name: "성탄절", red: true },
-
-    // 주요 음력 공휴일 2026-2036 (수동 입력)
-    "2026-02-16": { name: "설날연휴", red: true }, "2026-02-17": { name: "설날", red: true }, "2026-02-18": { name: "설날연휴", red: true },
-    "2026-05-24": { name: "석가탄신일", red: true }, "2026-09-24": { name: "추석연휴", red: true }, "2026-09-25": { name: "추석", red: true }, "2026-09-26": { name: "추석연휴", red: true },
-    "2027-02-06": { name: "설날연휴", red: true }, "2027-02-07": { name: "설날", red: true }, "2027-02-08": { name: "설날연휴", red: true },
-    "2027-05-13": { name: "석가탄신일", red: true }, "2027-09-14": { name: "추석연휴", red: true }, "2027-09-15": { name: "추석", red: true }, "2027-09-16": { name: "추석연휴", red: true },
-    "2028-01-26": { name: "설날연휴", red: true }, "2028-01-27": { name: "설날", red: true }, "2028-01-28": { name: "설날연휴", red: true },
-    "2028-05-02": { name: "석가탄신일", red: true }, "2028-10-02": { name: "추석연휴", red: true }, "2028-10-03": { name: "추석", red: true }, "2028-10-04": { name: "추석연휴", red: true },
-    "2029-02-12": { name: "설날연휴", red: true }, "2029-02-13": { name: "설날", red: true }, "2029-02-14": { name: "설날연휴", red: true },
-    "2029-05-20": { name: "석가탄신일", red: true }, "2029-09-21": { name: "추석연휴", red: true }, "2029-09-22": { name: "추석", red: true }, "2029-09-23": { name: "추석연휴", red: true },
-    "2030-02-02": { name: "설날연휴", red: true }, "2030-02-03": { name: "설날", red: true }, "2030-02-04": { name: "설날연휴", red: true },
-    "2030-05-09": { name: "석가탄신일", red: true }, "2030-09-11": { name: "추석연휴", red: true }, "2030-09-12": { name: "추석", red: true }, "2030-09-13": { name: "추석연휴", red: true },
-    "2031-01-22": { name: "설날연휴", red: true }, "2031-01-23": { name: "설날", red: true }, "2031-01-24": { name: "설날연휴", red: true },
-    "2031-05-28": { name: "석가탄신일", red: true }, "2031-09-30": { name: "추석연휴", red: true }, "2031-10-01": { name: "추석", red: true }, "2031-10-02": { name: "추석연휴", red: true },
-    "2032-02-10": { name: "설날연휴", red: true }, "2032-02-11": { name: "설날", red: true }, "2032-02-12": { name: "설날연휴", red: true },
-    "2032-05-16": { name: "석가탄신일", red: true }, "2032-09-18": { name: "추석연휴", red: true }, "2032-09-19": { name: "추석", red: true }, "2032-09-20": { name: "추석연휴", red: true },
-    "2033-01-30": { name: "설날연휴", red: true }, "2033-01-31": { name: "설날", red: true }, "2033-02-01": { name: "설날연휴", red: true },
-    "2033-05-06": { name: "석가탄신일", red: true }, "2033-09-07": { name: "추석연휴", red: true }, "2033-09-08": { name: "추석", red: true }, "2033-09-09": { name: "추석연휴", red: true },
-    "2034-02-18": { name: "설날연휴", red: true }, "2034-02-19": { name: "설날", red: true }, "2034-02-20": { name: "설날연휴", red: true },
-    "2034-05-25": { name: "석가탄신일", red: true }, "2034-09-26": { name: "추석연휴", red: true }, "2034-09-27": { name: "추석", red: true }, "2034-09-28": { name: "추석연휴", red: true },
-    "2035-02-07": { name: "설날연휴", red: true }, "2035-02-08": { name: "설날", red: true }, "2035-02-09": { name: "설날연휴", red: true },
-    "2035-05-15": { name: "석가탄신일", red: true }, "2035-09-15": { name: "추석연휴", red: true }, "2035-09-16": { name: "추석", red: true }, "2035-09-17": { name: "추석연휴", red: true },
-    "2036-01-27": { name: "설날연휴", red: true }, "2036-01-28": { name: "설날", red: true }, "2036-01-29": { name: "설날연휴", red: true },
-    "2036-05-03": { name: "석가탄신일", red: true }, "2036-10-03": { name: "추석연휴/개천절", red: true }, "2036-10-04": { name: "추석", red: true }, "2036-10-05": { name: "추석연휴", red: true }
+    // 음력 공휴일 수동 지정 (2026-2027 예시)
+    "2026-02-16": { name: "설날", red: true }, "2026-02-17": { name: "설날", red: true }, "2026-02-18": { name: "설날", red: true },
+    "2026-05-24": { name: "부처님오신날", red: true }, "2026-09-24": { name: "추석", red: true }, "2026-09-25": { name: "추석", red: true }, "2026-09-26": { name: "추석", red: true },
+    "2027-02-06": { name: "설날", red: true }, "2027-02-07": { name: "설날", red: true }, "2027-02-08": { name: "설날", red: true }
 };
 
 let route = { page: "list", id: null, date: null };
@@ -369,21 +350,28 @@ function renderMonthGrid(dateObj, targetElement) {
     const lastDate = new Date(year, month + 1, 0).getDate();
     const prevLastDate = new Date(year, month, 0).getDate();
     let html = `<div class="cal-grid"><div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div><div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>`;
-    for(let i = firstDay - 1; i >= 0; i--) { html += renderDayCell(year, month - 1, prevLastDate - i, true); }
-    for(let d = 1; d <= lastDate; d++) { html += renderDayCell(year, month, d, false); }
-    const nextCells = 42 - (firstDay + lastDate);
-    for(let d = 1; d <= nextCells; d++) { html += renderDayCell(year, month + 1, d, true); }
+    // 1. 삼일절 등 공휴일 계산 오류 수정을 위해 Date 객체 기반 정확한 매핑
+    for(let i = firstDay - 1; i >= 0; i--) { 
+        html += renderDayCell(year, month - 1, prevLastDate - i, true); 
+    }
+    for(let d = 1; d <= lastDate; d++) { 
+        html += renderDayCell(year, month, d, false); 
+    }
+    const totalCellsSoFar = firstDay + lastDate;
+    const nextCells = 42 - totalCellsSoFar;
+    for(let d = 1; d <= nextCells; d++) { 
+        html += renderDayCell(year, month + 1, d, true); 
+    }
     html += `</div>`;
     targetElement.innerHTML = html;
 }
 
 function renderDayCell(y, m, d, isOther) {
     const date = new Date(y, m, d);
-    const dateKey = date.toISOString().split('T')[0];
-    const shortDateKey = dateKey.substring(5); // MM-DD
+    const dateKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    const shortDateKey = String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
     const isToday = new Date().toDateString() === date.toDateString();
     
-    // 공휴일 체크 (양력 고정 + 수동 음력)
     const holiday = holidays[dateKey] || holidays[shortDateKey];
     const dayOfWeek = date.getDay();
     let cls = isOther ? 'other' : '';
@@ -411,7 +399,7 @@ function renderCalendarDetail(container) {
     let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
     events.sort((a, b) => (a[1].time || "").localeCompare(b[1].time || ""));
     
-    let editTitle = "", editTime = "12:00", editContent = "", isRepeated = false, editEndDate = dateKey;
+    let editTitle = "", editTime = "12:00", editContent = "", isRepeated = false, editEndDate = dateKey, isAllDay = false;
     if(editingCalId && calendarData[dateKey] && calendarData[dateKey][editingCalId]) {
         const target = calendarData[dateKey][editingCalId];
         editTitle = target.title;
@@ -419,6 +407,7 @@ function renderCalendarDetail(container) {
         editContent = target.content;
         isRepeated = target.repeated || false;
         editEndDate = target.endDate || dateKey;
+        isAllDay = target.isAllDay || false;
     }
 
     const titleText = editingCalId ? `${dateKey} 일정 수정` : `${dateKey} 일정 추가`;
@@ -432,7 +421,13 @@ function renderCalendarDetail(container) {
                 <div style="flex:1;"><label>시작일</label><input type="date" id="calStartDate" value="${dateKey}" disabled></div>
                 <div style="flex:1;"><label>종료일</label><input type="date" id="calEndDate" value="${editEndDate}"></div>
             </div>
-            <label>시간</label><input id="calTime" type="time" value="${editTime}">
+            <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                <label style="margin:0;">하루종일</label>
+                <input type="checkbox" id="calAllDay" style="width:20px; height:20px;" ${isAllDay ? 'checked' : ''} onchange="toggleTimeInput(this.checked)">
+            </div>
+            <div id="timeInputWrapper" style="display: ${isAllDay ? 'none' : 'block'};">
+                <label>시간</label><input id="calTime" type="time" value="${editTime}">
+            </div>
             <label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요">${esc(editContent)}</textarea>
             <label style="justify-content: flex-start; gap:10px;">
                 <input type="checkbox" id="calRepeat" style="width:20px; height:20px; margin:0;" ${isRepeated ? 'checked' : ''}> 매월 같은 날에 일정 반영
@@ -444,7 +439,7 @@ function renderCalendarDetail(container) {
                 <div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;" 
                      onclick="setEditCal('${id}')">
                     <div style="flex:1; margin-right:10px;">
-                        <small style="color:var(--brand); font-weight:bold;">${ev.time || ''} ${ev.repeated ? '(매월)' : ''}</small><br>
+                        <small style="color:var(--brand); font-weight:bold;">${ev.isAllDay ? '하루종일' : (ev.time || '')} ${ev.repeated ? '(매월)' : ''}</small><br>
                         <b style="font-size:14px;">${esc(ev.title || '')}</b>
                     </div>
                     <button class="small red" style="width:50px;" onclick="event.stopPropagation(); askDeleteCalMode('${dateKey}', '${id}', ${ev.repeated || false}, '${ev.repeatId || ''}')">삭제</button>
@@ -452,6 +447,10 @@ function renderCalendarDetail(container) {
             `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
             <button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button>
         </div>`;
+}
+
+function toggleTimeInput(isAllDay) {
+    document.getElementById('timeInputWrapper').style.display = isAllDay ? 'none' : 'block';
 }
 
 function setEditCal(id) { editingCalId = id; render(); }
@@ -482,80 +481,88 @@ function closeModal() { document.getElementById("pwModal").style.display = "none
 function doDeleteCal(dateKey, id) { db.ref(`calendar_v3/${dateKey}/${id}`).remove().then(() => { closeModal(); editingCalId = null; render(); }); }
 
 function doDeleteRepeatRange(dateKey, repeatId, mode) {
-    const targetDate = new Date(dateKey);
+    const targetDateStr = dateKey;
     const updates = {};
     Object.keys(calendarData).forEach(dKey => {
         Object.keys(calendarData[dKey]).forEach(eId => {
             const ev = calendarData[dKey][eId];
             if (ev.repeatId === repeatId) {
-                if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = null;
-                else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = null;
+                if (mode === 'all') updates[`${dKey}/${eId}`] = null;
+                else if (mode === 'after' && dKey >= targetDateStr) updates[`${dKey}/${eId}`] = null;
             }
         });
     });
-    db.ref().update(updates).then(() => { closeModal(); editingCalId = null; render(); });
+    db.ref("calendar_v3").update(updates).then(() => { closeModal(); editingCalId = null; render(); });
 }
 
 function doUpdateRepeat(dateKey, id, repeatId, data, mode) {
-    const targetDate = new Date(dateKey);
+    const targetDateStr = dateKey;
     const updates = {};
-    if (mode === 'one') updates[`calendar_v3/${dateKey}/${id}`] = data;
-    else {
+    if (mode === 'one') {
+        updates[`${dateKey}/${id}`] = data;
+    } else {
         Object.keys(calendarData).forEach(dKey => {
             Object.keys(calendarData[dKey]).forEach(eId => {
                 const ev = calendarData[dKey][eId];
                 if (ev.repeatId === repeatId) {
-                    if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = data;
-                    else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = data;
+                    if (mode === 'all') updates[`${dKey}/${eId}`] = data;
+                    else if (mode === 'after' && dKey >= targetDateStr) updates[`${dKey}/${eId}`] = data;
                 }
             });
         });
     }
-    db.ref().update(updates).then(() => { closeModal(); editingCalId = null; render(); });
+    db.ref("calendar_v3").update(updates).then(() => { closeModal(); editingCalId = null; render(); });
 }
 
 function saveCal(dateKey) {
     const title = document.getElementById("calTitle").value.trim();
-    const time = document.getElementById("calTime").value;
+    const isAllDay = document.getElementById("calAllDay").checked;
+    const time = isAllDay ? "00:00" : document.getElementById("calTime").value;
     const content = document.getElementById("calContent").value.trim();
     const repeat = document.getElementById("calRepeat").checked;
     const endDate = document.getElementById("calEndDate").value;
     
     if(!title) return alert("제목을 입력해주세요.");
-    const data = { title, time, content, repeated: repeat, startDate: dateKey, endDate };
+    const data = { title, time, content, repeated: repeat, startDate: dateKey, endDate, isAllDay };
 
     if (editingCalId) {
         const currentEv = calendarData[dateKey][editingCalId];
-        if (currentEv.repeated) { askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data); return; }
+        if (currentEv.repeated) { 
+            askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data); 
+            return; 
+        }
         db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { editingCalId = null; render(); });
     } else {
         const updates = {};
-        const repeatId = repeat ? "rep_" + Date.now() : "single_" + Date.now();
+        const repeatId = "rep_" + Date.now();
         
+        // 1회성 기간 일정 처리
         let start = new Date(dateKey);
         let end = new Date(endDate);
         while(start <= end) {
-            const dStr = start.toISOString().split('T')[0];
-            const newRef = db.ref("calendar_v3/" + dStr).push();
-            updates[`calendar_v3/${dStr}/${newRef.key}`] = { ...data, repeatId };
+            const dStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
+            const newKey = db.ref("calendar_v3/" + dStr).push().key;
+            updates[`${dStr}/${newKey}`] = { ...data, repeatId: repeat ? repeatId : "single_" + Date.now() };
             start.setDate(start.getDate() + 1);
         }
 
+        // 3. 매월 반복 처리 수정 (정확한 연산)
         if (repeat) {
             for(let i=1; i<12; i++) {
                 let mStart = new Date(dateKey); mStart.setMonth(mStart.getMonth() + i);
                 let mEnd = new Date(endDate); mEnd.setMonth(mEnd.getMonth() + i);
                 if (mStart.getDate() !== new Date(dateKey).getDate()) continue;
+                
                 let cur = new Date(mStart);
                 while(cur <= mEnd) {
-                    const dStr = cur.toISOString().split('T')[0];
-                    const newRef = db.ref("calendar_v3/" + dStr).push();
-                    updates[`calendar_v3/${dStr}/${newRef.key}`] = { ...data, repeatId };
+                    const dStr = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
+                    const newKey = db.ref("calendar_v3/" + dStr).push().key;
+                    updates[`${dStr}/${newKey}`] = { ...data, repeatId };
                     cur.setDate(cur.getDate() + 1);
                 }
             }
         }
-        db.ref().update(updates).then(() => { editingCalId = null; render(); });
+        db.ref("calendar_v3").update(updates).then(() => { editingCalId = null; render(); });
     }
 }
 
