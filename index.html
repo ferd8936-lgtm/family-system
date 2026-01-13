@@ -68,8 +68,6 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-/* 캘린더 메인 화면 구성 */
-/* 1. 화면 비율 자동 조정을 위해 height: 100dvh 사용 */
 .cal-wrapper { background: #fff; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
 .cal-container { display: flex; width: 300%; flex: 1; transition: transform 0.3s ease-out; }
 .cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
@@ -85,11 +83,9 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-day.sat { color: blue; }
 .cal-day.other { color: #ccc !important; background: #fafafa; }
 .cal-day.other .cal-event-item { opacity: 0.4; }
-/* 3. 투데이 테두리 얇게 (1px) */
 .cal-day.today { background: #fff; outline: 1px solid #000; outline-offset: -1px; z-index: 1; } 
 .today-text { font-size: 8px; color: var(--brand); font-weight: bold; margin-left: 2px; }
 
-/* 4. 일정 가로 꽉 채우고 2줄 점 처리 */
 .cal-event-container { display: flex; flex-direction: column; gap: 1px; width: 100%; overflow: hidden; }
 .cal-event-item { 
     color: #000; 
@@ -107,6 +103,12 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     word-break: break-all;
     white-space: normal;
 }
+/* 1. 반복 일정 노란색 배경 반영 */
+.cal-event-item.repeated { background-color: #fef9c3; }
+
+/* 3. 반복 일정 팝업 버튼 스타일 */
+.btn-repeat-action { background: #fff !important; color: #000 !important; border: 1px solid var(--line) !important; margin: 4px 0 !important; font-weight: 500 !important; }
+
 .cal-footer { padding: 10px 15px; background: #fff; flex-shrink: 0; border-top: 1px solid var(--line); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
@@ -403,7 +405,7 @@ function renderDayCell(y, m, d, dateKey, isOther) {
         <div class="cal-day ${cls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})">
             <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
             <div class="cal-event-container">
-                ${events.map(ev => `<div class="cal-event-item">${esc(ev.title)}</div>`).join('')}
+                ${events.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''}">${esc(ev.title)}</div>`).join('')}
             </div>
         </div>`;
 }
@@ -457,7 +459,7 @@ function setEditCal(id) {
     render();
 }
 
-// 2. 반복 일정 삭제 옵션 팝업
+// 3, 4. 삭제 팝업 스타일 및 로직 수정
 function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
@@ -469,9 +471,9 @@ function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     } else {
         m.innerHTML = `<div class="card" style="text-align:center;">
             <b>반복 일정 삭제</b><p style="margin:10px 0; font-size:14px; color:#666;">삭제 범위를 선택해주세요.</p>
-            <button class="red" style="margin:4px 0;" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button>
-            <button class="red" style="margin:4px 0;" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 반복 삭제</button>
-            <button class="red" style="margin:4px 0;" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 반복 일정 삭제</button>
+            <button class="btn-repeat-action" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button>
+            <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 반복 삭제</button>
+            <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 반복 일정 삭제</button>
             <button class="gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
     }
 }
@@ -482,28 +484,51 @@ function doDeleteCal(dateKey, id) {
     db.ref(`calendar_v3/${dateKey}/${id}`).remove().then(() => { closeModal(); editingCalId = null; render(); });
 }
 
-// 2. 반복 일정 범위 삭제 기능
 function doDeleteRepeatRange(dateKey, repeatId, mode) {
-    if (!repeatId) return alert("반복 데이터 정보가 없습니다.");
     const targetDate = new Date(dateKey);
     const updates = {};
-    
     Object.keys(calendarData).forEach(dKey => {
         const dayEvents = calendarData[dKey];
         Object.keys(dayEvents).forEach(eId => {
             const ev = dayEvents[eId];
             if (ev.repeatId === repeatId) {
-                if (mode === 'all') {
-                    updates[`calendar_v3/${dKey}/${eId}`] = null;
-                } else if (mode === 'after') {
-                    if (new Date(dKey) >= targetDate) {
-                        updates[`calendar_v3/${dKey}/${eId}`] = null;
-                    }
-                }
+                if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = null;
+                else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = null;
             }
         });
     });
-    
+    db.ref().update(updates).then(() => { closeModal(); editingCalId = null; render(); });
+}
+
+// 5. 반복 일정 수정 팝업 및 로직
+function askEditRepeatMode(dateKey, id, repeatId, newData) {
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;">
+        <b>반복 일정 수정</b><p style="margin:10px 0; font-size:14px; color:#666;">수정 범위를 선택해주세요.</p>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'one')">이 일정만 수정</button>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'after')">이 일정과 이후 모든 반복 수정</button>
+        <button class="btn-repeat-action" onclick="doUpdateRepeat('${dateKey}', '${id}', '${repeatId}', ${JSON.stringify(newData).replace(/"/g, '&quot;')}, 'all')">연관된 모든 반복 일정 수정</button>
+        <button class="gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
+}
+
+function doUpdateRepeat(dateKey, id, repeatId, data, mode) {
+    const targetDate = new Date(dateKey);
+    const updates = {};
+    if (mode === 'one') {
+        updates[`calendar_v3/${dateKey}/${id}`] = data;
+    } else {
+        Object.keys(calendarData).forEach(dKey => {
+            const dayEvents = calendarData[dKey];
+            Object.keys(dayEvents).forEach(eId => {
+                const ev = dayEvents[eId];
+                if (ev.repeatId === repeatId) {
+                    if (mode === 'all') updates[`calendar_v3/${dKey}/${eId}`] = data;
+                    else if (mode === 'after' && new Date(dKey) >= targetDate) updates[`calendar_v3/${dKey}/${eId}`] = data;
+                }
+            });
+        });
+    }
     db.ref().update(updates).then(() => { closeModal(); editingCalId = null; render(); });
 }
 
@@ -515,23 +540,28 @@ function saveCal(dateKey) {
     
     if(!title) return alert("제목을 입력해주세요.");
     
-    // 6. 즉시 반영을 위해 로컬 데이터를 가상으로 업데이트하거나 렌더링 호출
-    if(repeat) {
-        const repeatId = "rep_" + Date.now();
-        const baseDate = new Date(dateKey);
-        const updates = {};
-        for(let i=0; i<12; i++) {
-            let next = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
-            if(next.getDate() !== baseDate.getDate()) continue; 
-            const nextKey = next.toISOString().split('T')[0];
-            const newRef = db.ref("calendar_v3/" + nextKey).push();
-            updates[`calendar_v3/${nextKey}/${newRef.key}`] = { title, time, content, repeated: true, repeatId };
+    const data = { title, time, content, repeated: repeat };
+
+    if (editingCalId) {
+        const currentEv = calendarData[dateKey][editingCalId];
+        if (currentEv.repeated) {
+            askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data);
+            return;
         }
-        db.ref().update(updates).then(() => { editingCalId = null; render(); });
+        db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { editingCalId = null; render(); });
     } else {
-        const data = { title, time, content, repeated: false };
-        if(editingCalId) {
-            db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { editingCalId = null; render(); });
+        if(repeat) {
+            const repeatId = "rep_" + Date.now();
+            const baseDate = new Date(dateKey);
+            const updates = {};
+            for(let i=0; i<12; i++) {
+                let next = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate());
+                if(next.getDate() !== baseDate.getDate()) continue; 
+                const nextKey = next.toISOString().split('T')[0];
+                const newRef = db.ref("calendar_v3/" + nextKey).push();
+                updates[`calendar_v3/${nextKey}/${newRef.key}`] = { ...data, repeatId };
+            }
+            db.ref().update(updates).then(() => { editingCalId = null; render(); });
         } else {
             db.ref("calendar_v3/" + dateKey).push(data).then(() => { render(); });
         }
