@@ -68,16 +68,20 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-.cal-wrapper { background: #fff; height: 100%; display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y; position: relative; }
-.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); z-index: 5; }
+/* 2. 캘린더 메인 화면 비율 최적화 */
+.cal-wrapper { background: #fff; height: 100%; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
+.cal-container { display: flex; width: 300%; height: 100%; transition: transform 0.3s ease-out; }
+.cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
+
+.cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
 .cal-day-label { background: #fdfdfd; padding: 5px 0; text-align: center; font-size: 13px; font-weight: bold; }
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
 .cal-day.sun { color: red; }
 .cal-day.sat { color: blue; }
-.cal-day.other { color: #ccc; background: #fafafa; }
-/* 1. 전월/차월 일정 연하게 표시 */
+.cal-day.other { color: #ccc !important; background: #fafafa; }
+/* 전월/차월 일정 연하게 표시 */
 .cal-day.other .cal-event-item { opacity: 0.4; }
 .cal-day.today { background: #fff; } 
 .today-text { font-size: 8px; color: var(--brand); font-weight: bold; margin-left: 2px; }
@@ -94,7 +98,7 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.cal-footer { padding: 10px 15px; background: var(--bg); z-index: 5; }
+.cal-footer { padding: 10px 15px; background: var(--bg); }
 .stat-item {border: 1px solid var(--line); border-radius: 8px; padding: 15px; margin-bottom: 10px; line-height: 1.6;}
 </style>
 </head>
@@ -131,7 +135,7 @@ let tempParentInput = { momC: "", dadC: "" };
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
-  if(route.page === "list") render();
+  if(route.page === "list" || route.page === "view") render();
 });
 
 db.ref("calendar_v3").on("value", (snapshot) => {
@@ -206,10 +210,13 @@ function render(){
   else if(route.page === "view"){
     const r = allData.find(x => String(x.id) === String(route.id));
     if(!r) return navigate({page:'list'});
-
-    // 4. 아이 상신 후 엄마, 아빠 모두 완료 전에는 "입력", 모두 완료 시 "수정"
-    const isBothDone = r.mom !== 'pending' && r.dad !== 'pending';
-    const parentBtnText = isBothDone ? "부모 의견 수정" : "부모 의견 입력";
+    
+    // 수정 사항 4: 엄마, 아빠 모두 의견 저장 전에는 "부모 의견 입력"으로 문구 변경
+    const isBothInputted = (r.mom !== "pending" && r.dad !== "pending");
+    const parentBtnText = isBothInputted ? "부모 의견 수정" : "부모 의견 입력";
+    
+    // 수정 사항 3: 내용 수정 페이지(parentArea가 채워졌을 때)에는 버튼 안보이게 처리
+    const showParentBtn = document.getElementById("parentArea") && document.getElementById("parentArea").innerHTML !== "" ? "none" : "block";
 
     app.innerHTML = `
       <div class="view-time-header">상신: ${r.time}</div>
@@ -224,7 +231,7 @@ function render(){
         ${renderLog('엄마', r.mom, r.momC, r.momTime)}${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
       </div>
       <div id="parentArea"></div>
-      <div id="btnParentAuthContainer" style="text-align:center; margin-bottom:10px;">
+      <div id="parentBtnWrapper" style="text-align:center; margin-bottom:10px; display: ${showParentBtn};">
         <button class="btn-parent-input" onclick="openParent('${r.id}')">${parentBtnText}</button>
       </div>
       <div class="btn-row"><button class="gray" onclick="navigate({page:'list'})">목록</button><button class="red" onclick="askDelete('${r.dbId}')">삭제</button></div>`;
@@ -270,87 +277,124 @@ function submit(){
   });
 }
 
-// 2. 캘린더 부드러운 연결 이동 (스와이프 시 이전/다음 월 동시 렌더링 방식)
+// 수정 사항 2: 스와이프 시 이전/다음 달력도 함께 보이도록 구현
 function renderCalendarView(container) {
-    const renderMonthGrid = (dateObj) => {
-        const year = dateObj.getFullYear();
-        const month = dateObj.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const lastDate = new Date(year, month + 1, 0).getDate();
-        let gridHtml = `<div class="cal-grid">
-            <div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div>
-            <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>`;
-        for(let i=0; i<firstDay; i++) gridHtml += `<div class="cal-day other"></div>`;
-        for(let d=1; d<=lastDate; d++) {
-            const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
-            let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
-            events.sort((a, b) => a.time.localeCompare(b.time));
-            const dayOfWeek = new Date(year, month, d).getDay();
-            let cls = isToday ? 'today' : '';
-            if(dayOfWeek === 0) cls += ' sun'; if(dayOfWeek === 6) cls += ' sat';
-            gridHtml += `<div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})">
-                <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
-                <div class="cal-event-container">${events.map(ev => `<div class="cal-event-item">${esc(ev.title || '')} ${esc(ev.content || '')}</div>`).join('')}</div>
-            </div>`;
-        }
-        gridHtml += `</div>`;
-        return gridHtml;
-    };
-
-    const year = currentCalDate.getFullYear();
-    const month = currentCalDate.getMonth();
+    const currentYear = currentCalDate.getFullYear();
+    const currentMonth = currentCalDate.getMonth();
     
-    // 메인 레이아웃
     container.innerHTML = `
         <div class="cal-wrapper">
-            <div class="cal-header"><button class="gray small" onclick="changeMonth(-1)">◀</button><b style="font-size:20px;">${year}년 ${month + 1}월</b><button class="gray small" onclick="changeMonth(1)">▶</button></div>
-            <div id="calSlider" style="flex:1; display:flex; width:300%; transform: translateX(-33.333%); position:relative;">
-                <div id="prevMonth" style="width:33.333%; height:100%; overflow:hidden; opacity:0.5;"></div>
-                <div id="currMonth" style="width:33.333%; height:100%; overflow:hidden;">${renderMonthGrid(currentCalDate)}</div>
-                <div id="nextMonth" style="width:33.333%; height:100%; overflow:hidden; opacity:0.5;"></div>
+            <div class="cal-header">
+                <button class="gray small" onclick="changeMonth(-1)">◀</button>
+                <b style="font-size:20px;">${currentYear}년 ${currentMonth + 1}월</b>
+                <button class="gray small" onclick="changeMonth(1)">▶</button>
+            </div>
+            <div class="cal-container" id="calContainer">
+                <div class="cal-month-view" id="prevMonthView"></div>
+                <div class="cal-month-view" id="currMonthView"></div>
+                <div class="cal-month-view" id="nextMonthView"></div>
             </div>
             <div class="cal-footer"><button class="gray" onclick="navigate({page:'list'})">게시판으로 돌아가기</button></div>
-        </div>`;
+        </div>
+    `;
 
-    const slider = document.getElementById('calSlider');
-    const prevDate = new Date(year, month - 1, 1);
-    const nextDate = new Date(year, month + 1, 1);
-    document.getElementById('prevMonth').innerHTML = renderMonthGrid(prevDate);
-    document.getElementById('nextMonth').innerHTML = renderMonthGrid(nextDate);
+    renderMonthGrid(new Date(currentYear, currentMonth - 1, 1), document.getElementById('prevMonthView'));
+    renderMonthGrid(new Date(currentYear, currentMonth, 1), document.getElementById('currMonthView'));
+    renderMonthGrid(new Date(currentYear, currentMonth + 1, 1), document.getElementById('nextMonthView'));
 
-    let startX = 0, currentX = 0, isDragging = false;
-    const baseTranslate = -33.333;
+    const calContainer = document.getElementById('calContainer');
+    calContainer.style.transform = 'translateX(-33.333%)';
 
-    slider.addEventListener('touchstart', e => {
+    let startX = 0, currentTranslate = 0, isDragging = false;
+    
+    calContainer.addEventListener('touchstart', e => {
         startX = e.touches[0].clientX;
         isDragging = true;
-        slider.style.transition = 'none';
+        calContainer.style.transition = 'none';
     });
 
-    slider.addEventListener('touchmove', e => {
-        if(!isDragging) return;
-        currentX = e.touches[0].clientX;
-        const diff = ((currentX - startX) / window.innerWidth) * 33.333;
-        slider.style.transform = `translateX(${baseTranslate + diff}%)`;
+    calContainer.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        const touchX = e.touches[0].clientX;
+        currentTranslate = touchX - startX;
+        const baseTranslate = -window.innerWidth; 
+        calContainer.style.transform = `translateX(${baseTranslate + currentTranslate}px)`;
     });
 
-    slider.addEventListener('touchend', e => {
+    calContainer.addEventListener('touchend', () => {
         isDragging = false;
-        slider.style.transition = 'transform 0.3s ease-out';
-        const totalDiff = currentX - startX;
-        const threshold = window.innerWidth / 2;
-
-        if (totalDiff > threshold) { // 전월로 이동
-            slider.style.transform = `translateX(0%)`;
-            setTimeout(() => { changeMonth(-1); }, 300);
-        } else if (totalDiff < -threshold) { // 차월로 이동
-            slider.style.transform = `translateX(-66.666%)`;
-            setTimeout(() => { changeMonth(1); }, 300);
-        } else { // 원래대로
-            slider.style.transform = `translateX(-33.333%)`;
+        calContainer.style.transition = 'transform 0.3s ease-out';
+        const threshold = window.innerWidth / 3;
+        if (Math.abs(currentTranslate) > threshold) {
+            if (currentTranslate > 0) {
+                calContainer.style.transform = 'translateX(0)';
+                setTimeout(() => changeMonth(-1), 300);
+            } else {
+                calContainer.style.transform = 'translateX(-66.666%)';
+                setTimeout(() => changeMonth(1), 300);
+            }
+        } else {
+            calContainer.style.transform = 'translateX(-33.333%)';
         }
+        currentTranslate = 0;
     });
+}
+
+function renderMonthGrid(dateObj, targetElement) {
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
+    
+    let html = `
+        <div class="cal-grid">
+            <div class="cal-day-label sun">일</div><div class="cal-day-label">월</div><div class="cal-day-label">화</div>
+            <div class="cal-day-label">수</div><div class="cal-day-label">목</div><div class="cal-day-label">금</div><div class="cal-day-label sat">토</div>
+    `;
+
+    // 수정 사항 1: 전월 날짜 및 일정 연하게 표시 (.other 클래스 활용)
+    for(let i = firstDay - 1; i >= 0; i--) {
+        const d = prevLastDate - i;
+        const dKey = `${month === 0 ? year-1 : year}-${String(month === 0 ? 12 : month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        html += renderDayCell(year, month - 1, d, dKey, true);
+    }
+    
+    for(let d = 1; d <= lastDate; d++) {
+        const dKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        html += renderDayCell(year, month, d, dKey, false);
+    }
+
+    const totalCells = 42; 
+    const nextCells = totalCells - (firstDay + lastDate);
+    for(let d = 1; d <= nextCells; d++) {
+        const dKey = `${month === 11 ? year+1 : year}-${String(month === 11 ? 1 : month+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        html += renderDayCell(year, month + 1, d, dKey, true);
+    }
+    
+    html += `</div>`;
+    targetElement.innerHTML = html;
+}
+
+function renderDayCell(y, m, d, dateKey, isOther) {
+    const date = new Date(y, m, d);
+    const isToday = new Date().toDateString() === date.toDateString();
+    let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
+    events.sort((a, b) => a.time.localeCompare(b.time));
+    
+    const dayOfWeek = date.getDay();
+    let cls = isOther ? 'other' : '';
+    if(isToday) cls += ' today';
+    if(dayOfWeek === 0) cls += ' sun'; 
+    if(dayOfWeek === 6) cls += ' sat';
+
+    return `
+        <div class="cal-day ${cls}" onclick="navigate({page:'calDetail', date:'${dateKey}'})">
+            <b>${d}${isToday ? '<span class="today-text">TODAY</span>' : ''}</b>
+            <div class="cal-event-container">
+                ${events.map(ev => `<div class="cal-event-item">${esc(ev.title)} ${ev.time}</div>`).join('')}
+            </div>
+        </div>`;
 }
 
 function renderCalendarDetail(container) {
@@ -374,7 +418,7 @@ function renderCalendarDetail(container) {
                         <b style="font-size:14px;">${esc(ev.title || '')}</b><br>
                         <span style="font-size:13px; color:#666;">${esc(ev.content || '')}</span>
                     </div>
-                    <button class="small red" style="width:50px; flex-shrink:0; height:30px; display:inline-block;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button>
+                    <button class="small red" style="width:50px; flex-shrink:0; height:30px;" onclick="askDeleteCal('${dateKey}', '${id}')">삭제</button>
                 </div>
             `).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}
             <button class="gray" style="margin-top:10px;" onclick="navigate({page:'calendar'})">뒤로가기</button>
@@ -478,9 +522,10 @@ function authParent(id){
   const dadVal = r.dadC || tempParentInput.dadC;
   h += `<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', true)">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', true)">반대</button></div></div>`;
   h += `<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', true)">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', true)">반대</button></div></div>`;
+  
+  // 수정 사항 3: 내용 수정 페이지가 열리면 버튼 숨김
   document.getElementById("parentArea").innerHTML = h;
-  // 3. 수정 창이 열리면 하단 수정버튼 컨테이너 숨김
-  document.getElementById("btnParentAuthContainer").style.display = "none";
+  document.getElementById("parentBtnWrapper").style.display = "none";
 }
 
 function confirmDecide(dbId, who, val, title, cost, isEdit = false) {
