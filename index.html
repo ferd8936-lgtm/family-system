@@ -75,7 +75,8 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
+/* 3. 세로 행 높이 고정 및 일정 잘림 유지 */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 110px); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; overflow: hidden; }
 .cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
 
 .cal-day { background: #fff; padding: 4px; font-size: 13.2px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; font-family: 'NexonLv2Gothic', sans-serif; }
@@ -85,19 +86,21 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-day.other { color: #ccc !important; background: #fafafa; }
 .cal-day.today { background: #fff; outline: 1px solid #000; outline-offset: -1px; z-index: 1; }
 
-.holiday-text { font-size: 10.8px; font-weight: bold; line-height: 1; display: inline-block; font-family: 'NexonLv2Gothic', sans-serif; }
+/* 5. 공휴일 폰트 및 크기 일관성 유지 */
+.holiday-text { font-size: 10.8px; font-weight: bold; line-height: 1; display: inline-block; font-family: 'NexonLv2Gothic', sans-serif; margin-left: 2px; }
 .holiday-red { color: red; }
 .holiday-black { color: black; }
 
-.cal-event-container { display: flex; flex-direction: column; gap: 4px; width: 100%; overflow: hidden; }
+.cal-event-container { display: flex; flex-direction: column; gap: 2px; width: 100%; overflow: hidden; }
 
+/* 1. 글자 배경색 세로폭 글자에 딱 맞게 조정 */
 .cal-event-item { 
     color: #000; 
     background-color: #eef2ff; 
-    padding: 3px 4px; 
+    padding: 1px 4px; 
     border-radius: 2px; 
     font-size: 10.8px;
-    line-height: 1.3; 
+    line-height: 1.1; 
     width: 100%;
     display: -webkit-box;
     -webkit-line-clamp: 2; 
@@ -333,6 +336,7 @@ function renderDayCell(y, m, d, isOther) {
     return `<div class="cal-day ${cls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})"><div class="cal-day-num-box"><b style="font-size:13.2px;">${d}</b>${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</div><div class="cal-event-container">${events.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${ev.endDate && ev.endDate !== ev.startDate ? 'multi-day' : ''}">${esc(ev.title)}</div>`).join('')}</div></div>`;
 }
 
+/* 2. 하루종일 체크를 시간 글자 오른쪽으로 배치 */
 function renderCalendarDetail(container) {
     const dateKey = route.date;
     let events = calendarData[dateKey] ? Object.entries(calendarData[dateKey]) : [];
@@ -347,10 +351,15 @@ function renderCalendarDetail(container) {
     
     container.innerHTML = `<div class="card"><h2 style="margin-top:0; font-size: 1.2rem;">${titleText}</h2><label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요" value="${esc(editTitle)}" ${isEditingRepeated ? 'disabled' : ''}>
     <div style="display:flex; gap:10px;"><div style="flex:1;"><label>시작일</label><input type="date" id="calStartDate" value="${editStartDate}" ${isEditingRepeated ? 'disabled' : ''}></div><div style="flex:1;"><label>종료일</label><input type="date" id="calEndDate" value="${editEndDate}" ${isEditingRepeated ? 'disabled' : ''}></div></div>
-    <div style="display:flex; align-items:center; gap:15px; margin-top:10px;">
+    
+    <div style="display:flex; align-items:flex-end; gap:15px; margin-top:10px;">
         <div id="timeInputWrapper" style="flex:1; display: ${isAllDay ? 'none' : 'block'};"><label style="margin-top:0;">시간</label><input id="calTime" type="time" style="margin-top:4px;" value="${editTime}" ${isEditingRepeated ? 'disabled' : ''}></div>
-        <div class="flex-align-center" style="margin-top:18px;"><input type="checkbox" id="calAllDay" ${isAllDay ? 'checked' : ''} onchange="toggleTimeInput(this.checked)" ${isEditingRepeated ? 'disabled' : ''}><label for="calAllDay">하루종일</label></div>
+        <div class="flex-align-center" style="${isAllDay ? 'margin-top:14px;' : 'margin-bottom:12px;'}">
+            <input type="checkbox" id="calAllDay" ${isAllDay ? 'checked' : ''} onchange="toggleTimeInput(this.checked)" ${isEditingRepeated ? 'disabled' : ''}>
+            <label for="calAllDay">하루종일</label>
+        </div>
     </div>
+
     <label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요" ${isEditingRepeated ? 'disabled' : ''}>${esc(editContent)}</textarea><div class="flex-align-center"><input type="checkbox" id="calRepeat" ${isRepeated ? 'checked' : ''} ${editingCalId ? 'disabled' : ''}><label for="calRepeat">매월 같은 날에 일정 반영</label></div>${isEditingRepeated ? '<p style="color:red; font-size:12px; margin-top:5px;">※ 매월 반복 일정은 수정이 제한됩니다.<br>일정 삭제 후 다시 반영해주세요.</p>' : `<button onclick="saveCal('${dateKey}')">${btnText}</button>`}<hr style="margin:20px 0; border:0; border-top:1px solid var(--line);"><b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>${events.map(([id, ev]) => {
         const isMulti = ev.endDate && ev.endDate !== ev.startDate;
         let timeLabel = ev.isAllDay ? '하루종일' : (ev.time || '');
@@ -359,7 +368,7 @@ function renderCalendarDetail(container) {
     }).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}<button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button></div>`;
 }
 
-function toggleTimeInput(isAllDay) { document.getElementById('timeInputWrapper').style.display = isAllDay ? 'none' : 'block'; }
+function toggleTimeInput(isAllDay) { document.getElementById('timeInputWrapper').style.display = isAllDay ? 'none' : 'block'; render(); }
 
 function setEditCal(id) { 
     const dateKey = route.date;
@@ -372,10 +381,11 @@ function setEditCal(id) {
     editingCalId = id; render(); 
 }
 
+/* 4. 기간 설정 일정도 단일 일정과 동일하게 기능 및 UI 반영 (즉시 삭제 팝업) */
 function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
-    if (isRepeated || (calendarData[dateKey][id] && calendarData[dateKey][id].endDate !== calendarData[dateKey][id].startDate)) {
-        m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제</b><p style="margin-top:10px;">삭제 범위를 선택해주세요.</p>
+    if (isRepeated) {
+        m.innerHTML = `<div class="card" style="text-align:center;"><b>반복 일정 삭제</b><p style="margin-top:10px;">삭제 범위를 선택해주세요.</p>
         <button class="btn-repeat-action" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button>
         <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 일정 삭제</button>
         <button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 일정 삭제</button>
@@ -415,7 +425,6 @@ function saveCal(dateKey) {
     
     if (editingCalId) {
         const oldEv = calendarData[dateKey][editingCalId];
-        // 2일 이상 반영된 일정(multi-day) 수정 시 기존 데이터 일괄 삭제 후 재생성 로직
         if (oldEv.repeatId && (oldEv.endDate !== oldEv.startDate || oldEv.repeated)) {
             const updates = {};
             Object.keys(calendarData).forEach(dk => {
