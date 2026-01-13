@@ -332,9 +332,9 @@ function renderCalendarDetail(container) {
     const btnText = editingCalId ? "일정 수정하기" : "일정 추가하기";
     container.innerHTML = `<div class="card"><h2 style="margin-top:0; font-size: 1.2rem;">${titleText}</h2><label>제목</label><input id="calTitle" placeholder="일정 제목을 입력하세요" value="${esc(editTitle)}"><div style="display:flex; gap:10px;"><div style="flex:1;"><label>시작일</label><input type="date" id="calStartDate" value="${dateKey}" disabled></div><div style="flex:1;"><label>종료일</label><input type="date" id="calEndDate" value="${editEndDate}"></div></div><div class="flex-align-center"><input type="checkbox" id="calAllDay" ${isAllDay ? 'checked' : ''} onchange="toggleTimeInput(this.checked)"><label for="calAllDay">하루종일</label></div><div id="timeInputWrapper" style="display: ${isAllDay ? 'none' : 'block'};"><label>시간</label><input id="calTime" type="time" value="${editTime}"></div><label>내용</label><textarea id="calContent" rows="3" placeholder="상세 내용을 입력하세요">${esc(editContent)}</textarea><div class="flex-align-center"><input type="checkbox" id="calRepeat" ${isRepeated ? 'checked' : ''}><label for="calRepeat">매월 같은 날에 일정 반영</label></div><button onclick="saveCal('${dateKey}')">${btnText}</button><hr style="margin:20px 0; border:0; border-top:1px solid var(--line);"><b style="display:block; margin-bottom:10px;">저장된 일정 (${events.length})</b>${events.map(([id, ev]) => {
         const isMulti = ev.endDate && ev.endDate !== ev.startDate;
-        // 3. 기간 표시 (하루종일 + 2일 이상인 경우 기간 괄호 추가)
+        // 1 & 3. 2일 이상 기간 반영 일정은 시간 옆에 기간 표시
         let timeLabel = ev.isAllDay ? '하루종일' : (ev.time || '');
-        if(isMulti && ev.isAllDay) timeLabel += ` (${ev.startDate} ~ ${ev.endDate})`;
+        if(isMulti) timeLabel += ` (${ev.startDate} ~ ${ev.endDate})`;
         return `<div style="background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;" onclick="setEditCal('${id}')"><div style="flex:1; margin-right:10px;"><small style="color:var(--brand); font-weight:bold;">${timeLabel} ${ev.repeated ? '(매월)' : ''}</small><br><b style="font-size:14px;">${esc(ev.title || '')}</b></div><button class="small red" style="width:50px;" onclick="event.stopPropagation(); askDeleteCalMode('${dateKey}', '${id}', ${ev.repeated}, ${isMulti}, '${ev.repeatId || ''}')">삭제</button></div>`;
     }).join('') || '<p style="color:#999; font-size:14px;">저장된 일정이 없습니다.</p>'}<button class="gray" style="margin-top:10px;" onclick="editingCalId=null; navigate({page:'calendar'})">뒤로가기</button></div>`;
 }
@@ -342,14 +342,14 @@ function renderCalendarDetail(container) {
 function toggleTimeInput(isAllDay) { document.getElementById('timeInputWrapper').style.display = isAllDay ? 'none' : 'block'; }
 function setEditCal(id) { editingCalId = id; render(); }
 
-// 4, 7. 삭제 및 수정 팝업 분기 처리 개선
 function askDeleteCalMode(dateKey, id, isRepeated, isMulti, repeatId) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
-    if (isMulti && !isRepeated) { // 기간 일정이면서 매월 반복이 아닌 경우: 팝업 없이 전체 삭제
+    // 4. 기간 일정(2일 이상)은 팝업 없이 전체 삭제 (매월 반복이 아닌 경우)
+    if (isMulti && !isRepeated) {
         doDeleteRepeatRange(dateKey, repeatId, 'all');
-    } else if (isRepeated) { // 매월 반복 일정인 경우: 팝업 노출
+    } else if (isRepeated) {
         m.innerHTML = `<div class="card" style="text-align:center;"><b>반복 일정 삭제 옵션</b><p style="margin:10px 0; font-size:14px; color:#666;">삭제 범위를 선택해주세요.</p><button class="btn-repeat-action" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button><button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 반복 삭제</button><button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 반복 일정 삭제</button><button class="gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
-    } else { // 단일 일정
+    } else {
         m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제 확인</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button><button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
     }
 }
@@ -367,8 +367,7 @@ function doDeleteRepeatRange(dateKey, repeatId, mode) {
     const updates = {};
     Object.keys(calendarData).forEach(dKey => {
         Object.keys(calendarData[dKey]).forEach(eId => {
-            const ev = calendarData[dKey][eId];
-            if (ev.repeatId === repeatId) {
+            if (calendarData[dKey][eId].repeatId === repeatId) {
                 if (mode === 'all') updates[`${dKey}/${eId}`] = null;
                 else if (mode === 'after' && dKey >= dateKey) updates[`${dKey}/${eId}`] = null;
             }
@@ -377,19 +376,23 @@ function doDeleteRepeatRange(dateKey, repeatId, mode) {
     db.ref("calendar_v3").update(updates).then(() => { closeModal(); editingCalId = null; render(); });
 }
 
+// 4. 동일 데이터의 일정만 수정되도록 개선된 로직
 function doUpdateRepeat(dateKey, id, repeatId, data, mode) {
     const updates = {};
+    const baseEv = calendarData[dateKey][id];
     if (mode === 'one') {
-        const newData = {...data, repeatId: repeatId}; // ID 유지
-        updates[`${dateKey}/${id}`] = newData;
+        updates[`${dateKey}/${id}`] = {...data, repeatId: repeatId};
     } else {
         Object.keys(calendarData).forEach(dKey => {
             Object.keys(calendarData[dKey]).forEach(eId => {
-                const ev = calendarData[dKey][eId];
-                if (ev.repeatId === repeatId) {
-                    const newData = {...data, repeatId: repeatId}; // ID 유지
-                    if (mode === 'all') updates[`${dKey}/${eId}`] = newData;
-                    else if (mode === 'after' && dKey >= dateKey) updates[`${dKey}/${eId}`] = newData;
+                const targetEv = calendarData[dKey][eId];
+                if (targetEv.repeatId === repeatId) {
+                    // 동일한 데이터(최초 상태)를 가진 일정만 필터링 (제목, 내용 비교)
+                    if (targetEv.title === baseEv.title && targetEv.content === baseEv.content) {
+                        const newData = {...data, repeatId: repeatId};
+                        if (mode === 'all') updates[`${dKey}/${eId}`] = newData;
+                        else if (mode === 'after' && dKey >= dateKey) updates[`${dKey}/${eId}`] = newData;
+                    }
                 }
             });
         });
@@ -405,45 +408,53 @@ function saveCal(dateKey) {
     const repeat = document.getElementById("calRepeat").checked;
     const endDate = document.getElementById("calEndDate").value;
     if(!title) return alert("제목을 입력해주세요.");
+    
     const data = { title, time, content, repeated: repeat, startDate: dateKey, endDate, isAllDay };
 
     if (editingCalId) {
         const currentEv = calendarData[dateKey][editingCalId];
         const isMulti = currentEv.endDate && currentEv.endDate !== currentEv.startDate;
-        // 4. 기간 일정(2일 이상)은 팝업 없이 즉시 전체 수정 반영 (repeatId 기준)
+        // 2 & 4. 기간 수정 시 즉시 반영 및 팝업 생략
         if (isMulti && !currentEv.repeated) {
-            doUpdateRepeat(dateKey, editingCalId, currentEv.repeatId, data, 'all');
+            // 기간 수정의 경우 기존의 묶인 일정을 모두 지우고 새 기간으로 덮어씀
+            doDeleteRepeatRange(dateKey, currentEv.repeatId, 'all');
+            editingCalId = null; 
+            // 삭제 후 새 일정으로 등록되도록 재귀 호출 대신 신규 로직 실행
+            createNewCalendarEntry(dateKey, endDate, repeat, data);
             return;
         }
-        // 반복 일정만 팝업 노출
         if (currentEv.repeated) { askEditRepeatMode(dateKey, editingCalId, currentEv.repeatId, data); return; }
         db.ref(`calendar_v3/${dateKey}/${editingCalId}`).update(data).then(() => { editingCalId = null; render(); });
     } else {
-        const updates = {}; const repeatId = "rep_" + Date.now();
-        // 기간 등록 (1회성 기간 혹은 매월 반복의 기반)
-        let start = new Date(dateKey); let end = new Date(endDate);
-        while(start <= end) {
-            const dStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
-            const newKey = db.ref("calendar_v3/" + dStr).push().key;
-            updates[`${dStr}/${newKey}`] = { ...data, repeatId: (repeat || endDate !== dateKey) ? repeatId : "single_" + Date.now() };
-            start.setDate(start.getDate() + 1);
-        }
-        if (repeat) {
-            for(let i=1; i<12; i++) {
-                let mStart = new Date(dateKey); mStart.setMonth(mStart.getMonth() + i);
-                let mEnd = new Date(endDate); mEnd.setMonth(mEnd.getMonth() + i);
-                if (mStart.getDate() !== new Date(dateKey).getDate()) continue;
-                let cur = new Date(mStart);
-                while(cur <= mEnd) {
-                    const dStr = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
-                    const newKey = db.ref("calendar_v3/" + dStr).push().key;
-                    updates[`${dStr}/${newKey}`] = { ...data, repeatId };
-                    cur.setDate(cur.getDate() + 1);
-                }
+        createNewCalendarEntry(dateKey, endDate, repeat, data);
+    }
+}
+
+// 신규/수정 시 공용 데이터 생성 로직
+function createNewCalendarEntry(dateKey, endDate, repeat, data) {
+    const updates = {}; const repeatId = "rep_" + Date.now();
+    let start = new Date(dateKey); let end = new Date(endDate);
+    while(start <= end) {
+        const dStr = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
+        const newKey = db.ref("calendar_v3/" + dStr).push().key;
+        updates[`${dStr}/${newKey}`] = { ...data, repeatId: (repeat || endDate !== dateKey) ? repeatId : "single_" + Date.now() };
+        start.setDate(start.getDate() + 1);
+    }
+    if (repeat) {
+        for(let i=1; i<12; i++) {
+            let mStart = new Date(dateKey); mStart.setMonth(mStart.getMonth() + i);
+            let mEnd = new Date(endDate); mEnd.setMonth(mEnd.getMonth() + i);
+            if (mStart.getDate() !== new Date(dateKey).getDate()) continue;
+            let cur = new Date(mStart);
+            while(cur <= mEnd) {
+                const dStr = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0') + '-' + String(cur.getDate()).padStart(2, '0');
+                const newKey = db.ref("calendar_v3/" + dStr).push().key;
+                updates[`${dStr}/${newKey}`] = { ...data, repeatId };
+                cur.setDate(cur.getDate() + 1);
             }
         }
-        db.ref("calendar_v3").update(updates).then(() => { editingCalId = null; render(); });
     }
+    db.ref("calendar_v3").update(updates).then(() => { editingCalId = null; render(); });
 }
 
 function changeMonth(diff) { currentCalDate.setMonth(currentCalDate.getMonth() + diff); render(); }
@@ -471,13 +482,13 @@ function toggleEdit(dbId) {
 
 function askDelete(dbId){
   const m = document.getElementById("pwModal"); m.style.display="flex";
-  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="closeModal()">닫기</button></div></div>`;
 }
 function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); closeModal(); }); } else { alert("비밀번호가 틀렸습니다."); } }
 
 function openParent(id){
   const m = document.getElementById("pwModal"); m.style.display="flex";
-  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
+  m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="closeModal()">닫기</button></div></div>`;
 }
 
 function authParent(id){
