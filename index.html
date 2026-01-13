@@ -77,8 +77,8 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; }
 
-/* 요일 칸 세로 사이즈 수정 */
-.cal-day-label { background: #fdfdfd; padding: 2px 0; text-align: center; font-size: 13px; font-weight: bold; line-height: 1; }
+/* 요일 칸 세로 사이즈 및 가운데 정렬 수정 */
+.cal-day-label { background: #fdfdfd; height: 18px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: bold; line-height: 1; }
 
 .cal-day { background: #fff; padding: 4px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
 .cal-day.sun { color: red; }
@@ -224,7 +224,7 @@ function render(){
         <label>계획</label><textarea id="view-plan" class="plan-box" disabled>${esc(r.plan)}</textarea>
         <label>비용(원)</label><input id="view-cost" disabled type="text" value="${formatComma(r.cost)}">
       </div>
-      <div class="parent-result"><div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
+      <div id="parentViewLog" class="parent-result"><div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;"><b>부모 의견 기록</b></div>
         ${renderLog('엄마', r.mom, r.momC, r.momTime)}${renderLog('아빠', r.dad, r.dadC, r.dadTime)}
       </div>
       <div id="parentArea"></div>
@@ -514,6 +514,11 @@ function authParent(id){
   if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
   document.getElementById("pwModal").style.display="none";
   const r = allData.find(x=>String(x.id)===String(id)); 
+  
+  // 수정 사항 2: 입력 페이지 진입 시 기존 로그 숨김
+  const logArea = document.getElementById("parentViewLog");
+  if(logArea) logArea.style.display = "none";
+
   let h = "";
   const momVal = r.momC || tempParentInput.momC;
   const dadVal = r.dadC || tempParentInput.dadC;
@@ -521,8 +526,33 @@ function authParent(id){
   const isMomEdit = r.mom && r.mom !== 'pending';
   const isDadEdit = r.dad && r.dad !== 'pending';
 
-  h += `<div class="card"><b>엄마 의견</b><textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', ${isMomEdit})">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', ${isMomEdit})">반대</button></div></div>`;
-  h += `<div class="card"><b>아빠 의견</b><textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea><div style="text-align:left; margin-top:10px;"><button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', ${isDadEdit})">찬성</button><button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', ${isDadEdit})">반대</button></div></div>`;
+  // 수정 사항 2: 입력칸 위에 기존 기록 요약 표시
+  const momIcon = r.mom === 'approve' ? '✅ 찬성' : (r.mom === 'reject' ? '❌ 반대' : '⏳ 대기');
+  const dadIcon = r.dad === 'approve' ? '✅ 찬성' : (r.dad === 'reject' ? '❌ 반대' : '⏳ 대기');
+
+  h += `<div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
+            <b>엄마 의견</b>
+            <span style="color:#666;">${momIcon} ${r.momTime ? '('+r.momTime+')' : ''}</span>
+          </div>
+          <textarea id="momC" rows="3" oninput="tempParentInput.momC=this.value">${momVal}</textarea>
+          <div style="text-align:left; margin-top:10px;">
+            <button class="fit green" onclick="confirmDecide('${r.dbId}','mom','approve','${r.title}', '${r.cost}', ${isMomEdit})">찬성</button>
+            <button class="fit red" onclick="confirmDecide('${r.dbId}','mom','reject','${r.title}', '${r.cost}', ${isMomEdit})">반대</button>
+          </div>
+        </div>`;
+        
+  h += `<div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
+            <b>아빠 의견</b>
+            <span style="color:#666;">${dadIcon} ${r.dadTime ? '('+r.dadTime+')' : ''}</span>
+          </div>
+          <textarea id="dadC" rows="3" oninput="tempParentInput.dadC=this.value">${dadVal}</textarea>
+          <div style="text-align:left; margin-top:10px;">
+            <button class="fit green" onclick="confirmDecide('${r.dbId}','dad','approve','${r.title}', '${r.cost}', ${isDadEdit})">찬성</button>
+            <button class="fit red" onclick="confirmDecide('${r.dbId}','dad','reject','${r.title}', '${r.cost}', ${isDadEdit})">반대</button>
+          </div>
+        </div>`;
   
   document.getElementById("parentArea").innerHTML = h;
   document.getElementById("parentBtnWrapper").style.display = "none";
