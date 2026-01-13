@@ -260,7 +260,7 @@ function submit(){
   const pl = document.getElementById("pl").value.trim();
   const newPost = { id: Date.now().toString(), title:t, purpose:p, plan:pl, cost:rawC, time:now(), mom: "pending", dad: "pending", momC: "", dadC: "", momTime: "", dadTime: "" };
   db.ref("approvals").push(newPost).then(() => {
-    const msg = `[똑똑! 가족게시판]\n아이의 의견이 등록되었습니다!
+    const msg = `[똑똑! 가족게시판]\n아이의 의견이 등록되었습니다!`;
     const m = document.getElementById("pwModal");
     m.style.display = "flex";
     m.innerHTML = `<div class="card" style="text-align:center;"><b style="font-size:18px; display:block; margin-bottom:10px;">✅ 상신 완료</b><p style="color:#666; margin-bottom:20px;">가족들에게 문자를 보낼까요?</p><div class="btn-row"><a class="sms-btn" href="${getSmsUrl(msg)}" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">문자 보내기</a><button class="gray" onclick="document.getElementById('pwModal').style.display='none'; navigate({page:'list'});">그냥 닫기</button></div></div>`;
@@ -504,4 +504,3 @@ history.replaceState({page:'list'}, "");
 </script>
 </body>
 </html>
-
