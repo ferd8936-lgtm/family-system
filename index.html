@@ -68,15 +68,16 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-/* 캘린더 레이아웃 (기존 유지) */
+/* 캘린더 레이아웃 수정 (세로선 제거 및 제목 표시 변경) */
 .cal-wrapper { background: #fff; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
 .cal-container { display: flex; width: 300%; flex: 1; min-height: 0; transition: transform 0.3s ease-out; }
 .cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: var(--line); gap: 1px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; overflow: hidden; }
-.cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; }
-.cal-day { background: #fff; padding: 4px; font-size: 13.2px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; font-family: 'NexonLv2Gothic', sans-serif; }
+/* (추가3) 세로선 제거를 위해 gap: 0 및 배경색 조정 */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: #fff; gap: 0px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; overflow: hidden; border-left: 1px solid var(--line); }
+.cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.cal-day { background: #fff; padding: 4px; font-size: 13.2px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; font-family: 'NexonLv2Gothic', sans-serif; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .cal-day-num-box { display: flex; align-items: center; gap: 4px; }
 .cal-day.sun, .cal-day.holiday { color: red; }
 .cal-day.sat { color: blue; }
@@ -86,10 +87,18 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .holiday-red { color: red; }
 .holiday-black { color: black; }
 .cal-event-container { display: flex; flex-direction: column; gap: 2px; width: 100%; overflow: hidden; flex: 1; }
-.cal-event-item { color: #000; background-color: #eef2ff; padding: 1px 4px; border-radius: 2px; font-size: 10.8px; line-height: 1.1; width: 100%; display: block; overflow: hidden; word-break: break-all; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;}
-.many-events .cal-event-item { white-space: nowrap; overflow: hidden; text-overflow: clip; -webkit-line-clamp: 1; display: block; }
+
+/* (추가1) 캘린더 일정 제목 2줄 표시 및 자연스러운 잘림 */
+.cal-event-item { color: #000; background-color: #eef2ff; padding: 1px 4px; border-radius: 2px; font-size: 10.8px; line-height: 1.1; width: 100%; display: block; overflow: hidden; word-break: break-all; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: clip; }
+.many-events .cal-event-item { -webkit-line-clamp: 1; }
+
+/* (추가3) 기간 일정 스타일: 좌우 여백 제거하여 연결되게 표시 */
+.cal-event-item.multi-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -4px; width: calc(100% + 4px); }
+.cal-event-item.multi-mid { border-radius: 0; margin-left: -4px; margin-right: -4px; width: calc(100% + 8px); }
+.cal-event-item.multi-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -4px; width: calc(100% + 4px); }
+
 .cal-event-item.repeated { background-color: #fef9c3; }
-.cal-event-item.multi-day { background-color: #dcfce7; border-left: 2px solid #16a34a; }
+.cal-event-item.multi-day { background-color: #dcfce7; }
 .btn-repeat-action { background: #fff !important; color: #000 !important; border: 1px solid var(--line) !important; margin: 4px 0 !important; font-weight: 500 !important; width: 100%; }
 .cal-footer { padding: 10px 15px; background: #fff; flex-shrink: 0; border-top: 1px solid var(--line); }
 .flex-align-center { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
@@ -120,8 +129,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const PASSWORD = "7102";
+const ENTRY_PASSWORD = "5677"; // (추가1) 기타 항목 최초 진입 비밀번호
 
-// 공휴일 데이터 (기존 유지)
+// 공휴일 데이터
 const holidays = {
     "01-01": { name: "신정", red: true }, "03-01": { name: "삼일절", red: true }, "05-01": { name: "근로자의날", red: false }, "05-05": { name: "어린이날", red: true }, "05-08": { name: "어버이날", red: false }, "06-06": { name: "현충일", red: true }, "08-15": { name: "광복절", red: true }, "10-01": { name: "국군의날", red: false }, "10-03": { name: "개천절", red: true }, "10-09": { name: "한글날", red: true }, "12-25": { name: "성탄절", red: true },
     "2026-02-16": { name: "설날", red: true }, "2026-02-17": { name: "설날", red: true }, "2026-02-18": { name: "설날", red: true }, "2026-05-24": { name: "부처님오신날", red: true }, "2026-09-24": { name: "추석", red: true }, "2026-09-25": { name: "추석", red: true }, "2026-09-26": { name: "추석", red: true },
@@ -135,16 +145,41 @@ let calendarData = {};
 let currentCalDate = new Date();
 let tempParentInput = { momC: "", dadC: "" };
 let editingCalId = null;
+let isAuthorized = false; // 진입 인증 여부
+
+// (추가1) 기타 항목: 최초 진입 시 비밀번호 확인
+window.onload = () => {
+    if(!isAuthorized) {
+        checkEntryPassword();
+    }
+}
+
+function checkEntryPassword() {
+    const m = document.getElementById("pwModal");
+    m.style.display = "flex";
+    m.innerHTML = `<div class="card" style="text-align:center;"><b>접속 비밀번호</b><p style="font-size:14px; margin-top:8px;">가족 게시판 비밀번호를 입력하세요.</p><input id="entryPw" type="password" placeholder="비밀번호 입력" style="text-align:center;"><div class="btn-row"><button onclick="verifyEntryPw()">확인</button></div></div>`;
+}
+
+function verifyEntryPw() {
+    const val = document.getElementById("entryPw").value;
+    if(val === ENTRY_PASSWORD) {
+        isAuthorized = true;
+        closeModal();
+        render();
+    } else {
+        alert("비밀번호가 일치하지 않습니다.");
+    }
+}
 
 db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
-  if(route.page === "list" || route.page === "view") render();
+  if(isAuthorized && (route.page === "list" || route.page === "view")) render();
 });
 
 db.ref("calendar_v3").on("value", (snapshot) => {
   calendarData = snapshot.val() || {};
-  if(route.page === 'calendar' || route.page === 'calDetail') render();
+  if(isAuthorized && (route.page === 'calendar' || route.page === 'calDetail')) render();
 });
 
 function goHome() { navigate({page:'list'}); }
@@ -163,6 +198,7 @@ function navigate(p, push=true){
 }
 
 function render(){
+  if(!isAuthorized) return; // 미인증 시 렌더링 중단
   const app = document.getElementById("app");
   const header = document.getElementById("main-header");
   document.body.classList.remove("full-view");
@@ -242,7 +278,6 @@ function getSmsUrl(text) {
     return /iphone|ipad|ipod/.test(ua) ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
 }
 
-// 상신 확인 개선 (필수값 체크 강화)
 function confirmSubmit() {
   const t = document.getElementById("t").value.trim();
   const p = document.getElementById("p").value.trim();
@@ -267,7 +302,6 @@ function submit(){
   });
 }
 
-// 캘린더 렌더링 함수들 (기존 로직 유지)
 function renderCalendarView(container) {
     const currentYear = currentCalDate.getFullYear();
     const currentMonth = currentCalDate.getMonth();
@@ -305,7 +339,21 @@ function renderDayCell(y, m, d, isOther) {
     let events = calendarData[dateKey] ? Object.values(calendarData[dateKey]) : [];
     events.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
     const cellCls = events.length >= 4 ? 'many-events' : '';
-    return `<div class="cal-day ${cls} ${cellCls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})"><div class="cal-day-num-box"><b style="font-size:13.2px;">${d}</b>${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</div><div class="cal-event-container">${events.map(ev => `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${ev.endDate && ev.endDate !== ev.startDate ? 'multi-day' : ''}">${esc(ev.title)}</div>`).join('')}</div></div>`;
+    
+    // (추가3) 기간 일정 연결 표시를 위한 클래스 계산 로직
+    const eventHtml = events.map(ev => {
+        let multiCls = "";
+        if(ev.endDate && ev.endDate !== ev.startDate) {
+            multiCls = "multi-day ";
+            if(dateKey === ev.startDate) multiCls += "multi-start";
+            else if(dateKey === ev.endDate) multiCls += "multi-end";
+            else multiCls += "multi-mid";
+        }
+        // (추가1) 2줄 표시를 위한 제목 렌더링
+        return `<div class="cal-event-item ${ev.repeated ? 'repeated' : ''} ${multiCls}">${esc(ev.title)}</div>`;
+    }).join('');
+
+    return `<div class="cal-day ${cls} ${cellCls}" onclick="editingCalId=null; navigate({page:'calDetail', date:'${dateKey}'})"><div class="cal-day-num-box"><b style="font-size:13.2px;">${d}</b>${holiday ? `<span class="holiday-text ${holiday.red ? 'holiday-red' : 'holiday-black'}">${holiday.name}</span>` : ''}</div><div class="cal-event-container">${eventHtml}</div></div>`;
 }
 
 function renderCalendarDetail(container) {
@@ -334,15 +382,16 @@ function renderCalendarDetail(container) {
 function toggleTimeInput(isAllDay) { const wrapper = document.getElementById('timeInputWrapper'); if(wrapper) wrapper.style.display = isAllDay ? 'none' : 'block'; }
 function setEditCal(id) { const dateKey = route.date; const ev = calendarData[dateKey][id]; if(ev.repeated) { const m = document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card" style="text-align:center;"><b>반복 일정 안내</b><p style="margin-top:10px;">매월 반복 일정은 수정이 제한됩니다.<br>일정 삭제 후 다시 반영해주세요.</p><button class="fit gray" style="margin-top:15px;" onclick="closeModal()">확인</button></div>`; return; } editingCalId = id; render(); }
 
+// (추가2) 캘린더 기간 일정 삭제 팝업을 하루 일정 삭제 팝업과 동일하게 반영
 function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
     const ev = calendarData[dateKey][id];
     const isMultiDay = ev.endDate && ev.endDate !== ev.startDate;
+    
     if (isRepeated) {
         m.innerHTML = `<div class="card" style="text-align:center;"><b>반복 일정 삭제</b><p style="margin-top:10px;">삭제 범위를 선택해주세요.</p><button class="btn-repeat-action" onclick="doDeleteCal('${dateKey}', '${id}')">이 일정만 삭제</button><button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'after')">이 일정과 이후 모든 일정 삭제</button><button class="btn-repeat-action" onclick="doDeleteRepeatRange('${dateKey}', '${repeatId}', 'all')">연관된 모든 일정 삭제</button><button class="fit gray" style="margin-top:10px;" onclick="closeModal()">취소</button></div>`;
-    } else if (isMultiDay) {
-        m.innerHTML = `<div class="card" style="text-align:center;"><b>기간 일정 삭제</b><p style="margin-top:10px;">연결된 모든 기간의 일정이 함께 삭제됩니다.<br>삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">전체 삭제</button><button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
     } else {
+        // (추가2) 기간 일정 여부에 관계 없이 하루 일정 삭제와 UI/내용 통일
         m.innerHTML = `<div class="card" style="text-align:center;"><b>일정 삭제</b><p style="margin-top:10px;">이 일정을 삭제할까요?</p><div class="btn-row"><button class="fit red" onclick="doDeleteCal('${dateKey}', '${id}')">삭제</button><button class="fit gray" onclick="closeModal()">취소</button></div></div>`;
     }
 }
@@ -414,7 +463,6 @@ function renderLog(name, res, comm, time) {
     return `<div style="margin-bottom:15px;"><b>${name}: ${icon} ${transKo(res)} ${time ? '/ '+time : ''}</b><br><div style="margin-top:8px; padding-left:10px; color:#555;">의견: ${esc(comm || "-")}</div></div>`;
 }
 
-// 수정 시 문자 알림 추가
 function toggleEdit(dbId) {
     const btn = document.getElementById("btnEditMain");
     if(btn.innerText !== "저장") {
@@ -435,16 +483,16 @@ function askDelete(dbId){
   const m = document.getElementById("pwModal"); m.style.display="flex";
   m.innerHTML=`<div class="card" style="text-align:center;"><b>기록 삭제</b><input id="delPw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authDelete('${dbId}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
 }
-function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); closeModal(); }); } else { alert("비밀번호가 틀렸습니다."); } }
+function authDelete(dbId){ if(document.getElementById("delPw").value === PASSWORD){ db.ref("approvals/"+dbId).remove().then(() => { navigate({page:'list'}); closeModal(); }); } else { alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요."); } }
 
 function openParent(id){
   const m = document.getElementById("pwModal"); m.style.display="flex";
   m.innerHTML=`<div class="card" style="text-align:center;"><b>부모 인증</b><input id="pw" type="password" placeholder="비밀번호"><div class="btn-row"><button class="fit" onclick="authParent('${id}')">확인</button><button class="fit gray" onclick="document.getElementById('pwModal').style.display='none'">닫기</button></div></div>`;
 }
 
-// 부모 의견 입력 영역 개선 (기존 기록 숨김 및 요약 표시)
 function authParent(id){
-  if(document.getElementById("pw").value!==PASSWORD) return alert("틀렸습니다.");
+  // (추가1) 부모 의견: 비밀번호 오류 시 자연스러운 문구 변경
+  if(document.getElementById("pw").value!==PASSWORD) return alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요.");
   closeModal();
   const r = allData.find(x=>String(x.id)===String(id)); 
   const logArea = document.getElementById("parentViewLog");
@@ -455,12 +503,16 @@ function authParent(id){
       const res = r[who];
       const isEdit = res && res !== 'pending';
       const icon = res === 'approve' ? '✅ 찬성' : (res === 'reject' ? '❌ 반대' : '⏳ 대기');
-      const val = r[who+'C'] || tempParentInput[who+'C'];
       
+      // (추가3) 작성 중이던 내용 유지 로직
+      const currentInput = document.getElementById(who+"C") ? document.getElementById(who+"C").value : null;
+      const val = currentInput !== null ? currentInput : (r[who+'C'] || tempParentInput[who+'C']);
+      
+      // (추가2) 의견 수정 페이지 문구 크기 동기화 (기존 14px -> 16px급 b태그 등 활용)
       h += `<div class="card">
-              <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px;">
-                <b>${whoKo} 의견</b>
-                <span style="color:#666;">${icon} ${r[who+'Time'] ? '('+r[who+'Time']+')' : ''}</span>
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:16px;">
+                <b style="font-size:16px;">${whoKo} 의견</b>
+                <span style="color:#666; font-size:16px;">${icon} ${r[who+'Time'] ? '('+r[who+'Time']+')' : ''}</span>
               </div>
               <textarea id="${who}C" rows="3" oninput="tempParentInput.${who}C=this.value">${val || ''}</textarea>
               <div style="text-align:left; margin-top:10px;">
@@ -473,7 +525,6 @@ function authParent(id){
   document.getElementById("parentBtnWrapper").style.display = "none";
 }
 
-// 의견 등록 확인 및 유효성 검사 (의견 필수)
 function confirmDecide(dbId, who, val, isEdit = false) {
     const comment = document.getElementById(who + "C").value.trim();
     if (!comment) return alert("의견을 반드시 입력해야 합니다.");
