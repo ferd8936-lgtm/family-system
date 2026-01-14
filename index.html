@@ -68,14 +68,14 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .btn-row button, .btn-row .sms-btn {flex: 1; margin: 0;}
 .view-time-header {font-size: 14px;color: #666;margin-bottom: 10px;text-align: right;}
 
-/* 캘린더 레이아웃 (세로선 제거 반영) */
+/* 캘린더 레이아웃 (세로선 제거 및 통합 표시 강화) */
 .cal-wrapper { background: #fff; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; touch-action: none; position: relative; width: 100%; }
 .cal-container { display: flex; width: 300%; flex: 1; min-height: 0; transition: transform 0.3s ease-out; }
 .cal-month-view { width: 33.333%; height: 100%; display: flex; flex-direction: column; }
 .cal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #fff; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .cal-header button { width: 34px !important; height: 34px; padding: 0 !important; font-size: 14px; }
 
-/* (추가3.1) 세로선 제거를 위해 gap: 0 및 테두리 조정 */
+/* (추가 3.2) 세로 선 제거를 위해 gap을 0으로 설정하고 테두리 스타일을 셀 내부로 이동 */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); background: #fff; gap: 0px; flex: 1; border-bottom: 1px solid var(--line); width: 100%; overflow: hidden; border-left: 1px solid var(--line); }
 .cal-day-label { background: #fdfdfd; padding: 8px 0; text-align: center; font-size: 13px; font-weight: bold; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .cal-day { background: #fff; padding: 4px; font-size: 13.2px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; font-family: 'NexonLv2Gothic', sans-serif; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -89,14 +89,14 @@ td.title{text-align:left; line-height:1.35; word-break: break-all;}
 .holiday-black { color: black; }
 .cal-event-container { display: flex; flex-direction: column; gap: 2px; width: 100%; overflow: hidden; flex: 1; }
 
-/* (추가1.1) 일정 제목 2줄 표시 및 점 없이 자연스럽게 짤림 */
+/* (추가 1.2) 일정 제목 2줄 표시 및 자연스럽게 짤리게 수정 (점 표시 제거) */
 .cal-event-item { color: #000; background-color: #eef2ff; padding: 1px 4px; border-radius: 2px; font-size: 10.8px; line-height: 1.1; width: 100%; display: block; overflow: hidden; word-break: break-all; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-overflow: clip; }
 .many-events .cal-event-item { -webkit-line-clamp: 1; }
 
-/* (추가3.1) 기간 일정 스타일: 좌우 여백을 제거하여 하나의 띠처럼 연결 */
-.cal-event-item.multi-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -4px; width: calc(100% + 4px); }
-.cal-event-item.multi-mid { border-radius: 0; margin-left: -4px; margin-right: -4px; width: calc(100% + 8px); }
-.cal-event-item.multi-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -4px; width: calc(100% + 4px); }
+/* (추가 3.2) 기간 일정 스타일: 여백을 제거하고 좌우가 이어지도록 띠 형태 구현 */
+.cal-event-item.multi-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -4px; width: calc(100% + 4px); z-index: 2; }
+.cal-event-item.multi-mid { border-radius: 0; margin-left: -4px; margin-right: -4px; width: calc(100% + 8px); z-index: 1; }
+.cal-event-item.multi-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -4px; width: calc(100% + 4px); z-index: 2; }
 
 .cal-event-item.repeated { background-color: #fef9c3; }
 .cal-event-item.multi-day { background-color: #dcfce7; }
@@ -139,7 +139,7 @@ let calendarData = {};
 let currentCalDate = new Date();
 let tempParentInput = { momC: "", dadC: "" };
 let editingCalId = null;
-let isAuthorized = localStorage.getItem("board_authorized") === "true"; // (추가1.1) 로컬스토리지 확인
+let isAuthorized = localStorage.getItem("board_authorized") === "true"; 
 
 const holidays = {
     "01-01": { name: "신정", red: true }, "03-01": { name: "삼일절", red: true }, "05-01": { name: "근로자의날", red: false }, "05-05": { name: "어린이날", red: true }, "05-08": { name: "어버이날", red: false }, "06-06": { name: "현충일", red: true }, "08-15": { name: "광복절", red: true }, "10-01": { name: "국군의날", red: false }, "10-03": { name: "개천절", red: true }, "10-09": { name: "한글날", red: true }, "12-25": { name: "성탄절", red: true },
@@ -165,11 +165,11 @@ function verifyEntryPw() {
     const val = document.getElementById("entryPw").value;
     if(val === ENTRY_PASSWORD) {
         isAuthorized = true;
-        localStorage.setItem("board_authorized", "true"); // (추가1.1) 인증 성공 저장
+        localStorage.setItem("board_authorized", "true"); 
         closeModal();
         render();
     } else {
-        alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요."); // (기존1) 자연스러운 문구
+        alert("비밀번호가 일치하지 않습니다. 다시 확인해주세요."); 
     }
 }
 
@@ -177,7 +177,7 @@ db.ref("approvals").on("value", (snapshot) => {
   const val = snapshot.val();
   allData = val ? Object.keys(val).map(k => ({...val[k], dbId: k})) : [];
   
-  // (추가3.1) 부모 의견 입력 중일 때는 전체 리렌더링을 방지하여 입력 폼 유지
+  // 부모 의견 입력 중일 때는 전체 리렌더링을 방지하여 입력 폼과 비밀번호 세션 유지
   const parentArea = document.getElementById("parentArea");
   const isInputting = parentArea && parentArea.innerHTML !== "";
   
@@ -349,7 +349,7 @@ function renderDayCell(y, m, d, isOther) {
     events.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
     const cellCls = events.length >= 4 ? 'many-events' : '';
     
-    // (추가3.1) 기간 일정 연결 표시 계산
+    // (추가 3.2) 기간 일정 통합 표시를 위한 띠 로직 계산
     const eventHtml = events.map(ev => {
         let multiCls = "";
         if(ev.endDate && ev.endDate !== ev.startDate) {
@@ -390,7 +390,6 @@ function renderCalendarDetail(container) {
 function toggleTimeInput(isAllDay) { const wrapper = document.getElementById('timeInputWrapper'); if(wrapper) wrapper.style.display = isAllDay ? 'none' : 'block'; }
 function setEditCal(id) { const dateKey = route.date; const ev = calendarData[dateKey][id]; if(ev.repeated) { const m = document.getElementById("pwModal"); m.style.display="flex"; m.innerHTML=`<div class="card" style="text-align:center;"><b>반복 일정 안내</b><p style="margin-top:10px;">매월 반복 일정은 수정이 제한됩니다.<br>일정 삭제 후 다시 반영해주세요.</p><button class="fit gray" style="margin-top:15px;" onclick="closeModal()">확인</button></div>`; return; } editingCalId = id; render(); }
 
-// (추가2) 기간 일정 삭제 팝업 하루 일정 삭제와 통일
 function askDeleteCalMode(dateKey, id, isRepeated, repeatId) {
     const m = document.getElementById("pwModal"); m.style.display = "flex";
     if (isRepeated) {
@@ -510,7 +509,6 @@ function authParent(id){
       const currentInput = document.getElementById(who+"C") ? document.getElementById(who+"C").value : null;
       const val = currentInput !== null ? currentInput : (r[who+'C'] || tempParentInput[who+'C']);
       
-      // (추가2) 글자 크기 16px로 동기화
       h += `<div class="card">
               <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:16px;">
                 <b style="font-size:16px;">${whoKo} 의견</b>
